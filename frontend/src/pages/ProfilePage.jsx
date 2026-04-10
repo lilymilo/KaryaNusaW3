@@ -185,26 +185,26 @@ export default function ProfilePage() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Tabs */}
           <div className="w-full lg:w-64 flex-shrink-0">
-            <div className="glass rounded-2xl p-2 sticky top-24">
+            <div className="glass rounded-2xl p-2 sticky top-24 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible scrollbar-hide">
               <button 
                 onClick={() => setActiveTab('akun')}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'akun' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
-                <User size={20} /> <span>Data Akun</span>
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'akun' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+                <User size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Akun</span>
               </button>
               
               {user?.role === 'seller' && (
                 <button 
                   onClick={() => setActiveTab('toko')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mt-1 ${activeTab === 'toko' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
-                  <Home size={20} /> <span>Data Toko</span>
+                  className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'toko' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+                  <Home size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Toko</span>
                 </button>
               )}
 
               {user?.role === 'buyer' && (
                 <button 
                   onClick={() => setActiveTab('wishlist')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mt-1 ${activeTab === 'wishlist' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
-                  <Heart size={20} /> <span>Wishlist</span>
+                  className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'wishlist' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+                  <Heart size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Wishlist</span>
                 </button>
               )}
 
@@ -212,13 +212,13 @@ export default function ProfilePage() {
                 <>
                   <button 
                     onClick={() => setActiveTab('produk')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mt-1 ${activeTab === 'produk' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
-                    <Package size={20} /> <span>Kelola Produk</span>
+                    className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'produk' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+                    <Package size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Produk</span>
                   </button>
                   <button 
                     onClick={() => setActiveTab('statistik')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mt-1 ${activeTab === 'statistik' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
-                    <TrendingUp size={20} /> <span>Statistik</span>
+                    className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'statistik' ? 'btn-primary text-white' : 'text-[var(--text-secondary)] hover:bg-white/5'}`}>
+                    <TrendingUp size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Statistik</span>
                   </button>
                 </>
               )}

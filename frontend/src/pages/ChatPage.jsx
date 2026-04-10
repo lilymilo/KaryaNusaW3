@@ -201,91 +201,104 @@ export default function ChatPage() {
   if (!user) return null;
 
   return (
-    <div className="h-screen bg-[var(--bg-color)] flex flex-col overflow-hidden transition-colors duration-300">
+    <div className="h-screen bg-[var(--bg-color)] flex flex-col overflow-hidden transition-colors duration-300 pb-safe">
       <Navbar />
 
-      <div className="flex-1 mt-16 flex overflow-hidden">
+      <div className="flex-1 mt-14 sm:mt-16 flex overflow-hidden relative">
         
-        {/* SIDEBAR */}
-        {!isDirectChat && (
-          <div className={`${mobileShowSidebar ? 'flex' : 'hidden md:flex'} w-full md:w-80 lg:w-96 flex-col border-r border-[var(--border-color)] bg-white/5`}>
-            <div className="p-6 border-b border-[var(--border-color)]">
-              <div className="flex items-center gap-4 mb-4">
-                <button onClick={() => navigate(-1)} className="p-2 bg-[var(--card-bg)] hover:bg-white/10 border border-[var(--border-color)] rounded-xl text-[var(--text-secondary)]"><ArrowLeft size={18} /></button>
-                <h2 className="text-2xl font-black text-[var(--text-primary)]">Kotak Masuk</h2>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" size={18} />
-                <input type="text" placeholder="Cari pesan..." className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl pl-10 pr-4 py-2 text-sm" />
-              </div>
+        {/* SIDEBAR - Conversation List */}
+        <div className={`${(activePartner && !mobileShowSidebar) ? 'hidden' : 'flex'} md:flex w-full md:w-80 lg:w-96 flex-col border-r border-[var(--border-color)] bg-white/5`}>
+          <div className="p-4 sm:p-6 border-b border-[var(--border-color)]">
+            <div className="flex items-center gap-4 mb-4">
+              <button onClick={() => navigate(-1)} className="p-2 bg-[var(--card-bg)] hover:bg-white/10 border border-[var(--border-color)] rounded-xl text-[var(--text-secondary)]"><ArrowLeft size={18} /></button>
+              <h2 className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">Kotak Masuk</h2>
             </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" size={16} />
+              <input type="text" placeholder="Cari pesan..." className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl pl-9 pr-4 py-2 text-sm focus:border-purple-500 transition-all" />
+            </div>
+          </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {conversations.map((conv, idx) => (
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2">
+            {conversations.length === 0 ? (
+              <div className="text-center py-10 opacity-50">
+                <MessageCircle size={40} className="mx-auto mb-3" />
+                <p className="text-sm">Belum ada percakapan</p>
+              </div>
+            ) : (
+              conversations.map((conv, idx) => (
                 <div key={idx} onClick={() => { 
                   const identifier = conv.user.username || conv.user.id;
                   navigate(`/chat/${identifier}`); 
                   setActivePartner(conv.user); 
                   setMobileShowSidebar(false); 
                 }}
-                  className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all ${activePartner?.id === conv.user.id ? 'bg-purple-600 text-white shadow-lg' : 'hover:bg-white/5 text-[var(--text-primary)]'}`}>
-                  <img src={getAvatar(conv.user)} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white/20" />
+                  className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer transition-all ${activePartner?.id === conv.user.id ? 'bg-purple-600 text-white shadow-lg' : 'hover:bg-white/5 text-[var(--text-primary)]'}`}>
+                  <img src={getAvatar(conv.user)} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-white/20" />
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold truncate text-sm">{conv.user.shop_name || conv.user.full_name}</h4>
-                      <span className="text-[10px] opacity-70">{formatTime(conv.timestamp)}</span>
+                      <h4 className="font-bold truncate text-xs sm:text-sm">{conv.user.shop_name || conv.user.full_name}</h4>
+                      <span className={`text-[9px] sm:text-[10px] ${activePartner?.id === conv.user.id ? 'text-white/70' : 'opacity-70'}`}>{formatTime(conv.timestamp)}</span>
                     </div>
-                    <p className="text-xs truncate opacity-70">{conv.lastMessage}</p>
+                    <p className={`text-[11px] sm:text-xs truncate ${activePartner?.id === conv.user.id ? 'text-white/80' : 'opacity-70'}`}>{conv.lastMessage}</p>
                   </div>
                 </div>
-              ))}
-            </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
 
-        {/* MAIN CHAT */}
-        <div className="flex-1 flex flex-col bg-[var(--bg-color)] relative">
+        {/* MAIN CHAT - Message View */}
+        <div className={`${(!activePartner || mobileShowSidebar) ? 'hidden' : 'flex'} md:flex flex-1 flex-col bg-[var(--bg-color)] relative`}>
           {activePartner ? (
             <>
               {/* Header */}
-              <div className="p-4 md:px-8 md:py-5 border-b border-[var(--border-color)] flex items-center justify-between glass sticky top-0 z-10">
-                <div className="flex items-center gap-4">
-                  <button onClick={() => navigate(-1)} className="p-2.5 bg-[var(--card-bg)] hover:bg-white/10 border border-[var(--border-color)] rounded-xl text-[var(--text-secondary)] transition-all">
-                    <ArrowLeft size={20} />
+              <div className="p-3 sm:p-4 md:px-8 md:py-5 border-b border-[var(--border-color)] flex items-center justify-between glass sticky top-0 z-10">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <button 
+                    onClick={() => { 
+                      if (isDirectChat && !conversations.length) {
+                        navigate(-1);
+                      } else {
+                        setMobileShowSidebar(true);
+                      }
+                    }} 
+                    className="p-2 sm:p-2.5 bg-[var(--card-bg)] hover:bg-white/10 border border-[var(--border-color)] rounded-xl text-[var(--text-secondary)] transition-all md:hidden">
+                    <ArrowLeft size={18} />
                   </button>
-                  <img src={getAvatar(activePartner)} alt="" className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-purple-500/20" />
-                  <div>
-                    <h3 className="font-bold text-[var(--text-primary)] md:text-lg">{activePartner.shop_name || activePartner.full_name}</h3>
-                    <p className="text-[10px] font-bold text-green-500 uppercase tracking-widest">Active Now</p>
+                  <img src={getAvatar(activePartner)} alt="" className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-purple-500/20" />
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-[var(--text-primary)] text-sm sm:text-base md:text-lg truncate">{activePartner.shop_name || activePartner.full_name}</h3>
+                    <p className="text-[9px] sm:text-[10px] font-bold text-green-500 uppercase tracking-widest">Active Now</p>
                   </div>
                 </div>
-                <button className="p-2.5 text-[var(--text-secondary)] hover:bg-white/5 rounded-xl"><MoreVertical size={20} /></button>
+                <button className="p-2 text-[var(--text-secondary)] hover:bg-white/5 rounded-xl"><MoreVertical size={18} /></button>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-6">
-                <div className="max-w-4xl mx-auto space-y-6">
+              <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-4 sm:space-y-6 bg-dots-grid">
+                <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
                   {messages.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-3 duration-500`}>
-                      <div className={`max-w-[85%] md:max-w-[70%] space-y-1.5`}>
-                        <div className={`px-5 py-3.5 rounded-[1.5rem] text-[15px] font-medium leading-relaxed shadow-sm ${msg.sender_id === user.id ? 'bg-purple-600 text-white rounded-tr-none' : 'bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-tl-none'}`}>
+                    <div key={idx} className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                      <div className={`max-w-[88%] sm:max-w-[85%] md:max-w-[70%] space-y-1`}>
+                        <div className={`px-4 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl sm:rounded-[1.5rem] text-[13px] sm:text-[15px] font-medium leading-relaxed shadow-sm ${msg.sender_id === user.id ? 'bg-purple-600 text-white rounded-tr-none' : 'bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-tl-none'}`}>
                           
-                          {/* NEW: Attachment Rendering */}
+                          {/* Attachment Rendering */}
                           {msg.attachment_url && (
-                            <div className="mb-3">
+                            <div className="mb-2 sm:mb-3">
                               {msg.attachment_type === 'image' ? (
                                 <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
-                                  <img src={msg.attachment_url} alt="Attachment" className="max-w-full rounded-lg border border-white/10 max-h-80 object-cover" />
+                                  <img src={msg.attachment_url} alt="Attachment" className="max-w-full rounded-lg border border-white/10 max-h-60 sm:max-h-80 object-cover" />
                                 </a>
                               ) : (
                                 <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" 
-                                  className={`flex items-center gap-3 p-3 rounded-xl border ${msg.sender_id === user.id ? 'bg-white/10 border-white/20' : 'bg-[var(--bg-color)] border-[var(--border-color)]'}`}>
-                                  <File className="text-purple-400" size={24} />
+                                  className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl border ${msg.sender_id === user.id ? 'bg-white/10 border-white/20' : 'bg-[var(--bg-color)] border-[var(--border-color)]'}`}>
+                                  <File className="text-purple-400" size={20} />
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-bold truncate">File Lampiran</p>
-                                    <p className="text-[10px] opacity-70">Klik untuk unduh</p>
+                                    <p className="text-[10px] sm:text-xs font-bold truncate">File Lampiran</p>
+                                    <p className="text-[8px] sm:text-[10px] opacity-70">Klik untuk unduh</p>
                                   </div>
-                                  <Download size={18} />
+                                  <Download size={16} />
                                 </a>
                               )}
                             </div>
@@ -293,7 +306,7 @@ export default function ChatPage() {
                           
                           {msg.content}
                         </div>
-                        <p className={`text-[10px] text-[var(--text-secondary)] font-black uppercase ${msg.sender_id === user.id ? 'text-right' : 'text-left'}`}>{formatTime(msg.created_at)}</p>
+                        <p className={`text-[9px] sm:text-[10px] text-[var(--text-secondary)] font-black uppercase ${msg.sender_id === user.id ? 'text-right' : 'text-left'}`}>{formatTime(msg.created_at)}</p>
                       </div>
                     </div>
                   ))}
@@ -302,52 +315,52 @@ export default function ChatPage() {
               </div>
 
               {/* Input Area */}
-              <div className="p-4 md:px-10 md:py-6 border-t border-[var(--border-color)] glass">
+              <div className="p-3 sm:p-4 md:px-10 md:py-6 border-t border-[var(--border-color)] glass">
                 <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative">
                   
-                  {/* NEW: Staging Preview Area */}
+                  {/* Staging Preview Area */}
                   {stagedFile && (
-                    <div className="absolute bottom-full left-0 mb-4 animate-in slide-in-from-bottom-2 duration-300">
-                      <div className="glass p-3 rounded-2xl border border-purple-500/30 flex items-center gap-4 bg-[var(--card-bg)] shadow-2xl">
+                    <div className="absolute bottom-full left-0 right-0 mb-3 animate-in fade-in slide-in-from-bottom-2 duration-300 px-2 sm:px-0">
+                      <div className="glass p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-purple-500/30 flex items-center gap-3 sm:gap-4 bg-[var(--card-bg)] shadow-2xl">
                         {filePreview ? (
-                          <img src={filePreview} alt="Preview" className="w-16 h-16 rounded-xl object-cover" />
+                          <img src={filePreview} alt="Preview" className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl object-cover" />
                         ) : (
-                          <div className="w-16 h-16 rounded-xl bg-purple-500/10 flex items-center justify-center"><File className="text-purple-500" /></div>
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl bg-purple-500/10 flex items-center justify-center"><File className="text-purple-500" /></div>
                         )}
-                        <div className="pr-10 min-w-0">
-                          <p className="text-xs font-black text-[var(--text-primary)] truncate max-w-[150px]">{stagedFile.name}</p>
-                          <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest">Siap Dikirim</p>
+                        <div className="pr-8 min-w-0">
+                          <p className="text-[10px] sm:text-xs font-black text-[var(--text-primary)] truncate max-w-[120px] sm:max-w-[200px]">{stagedFile.name}</p>
+                          <p className="text-[8px] sm:text-[10px] font-bold text-purple-500 uppercase tracking-widest">Siap Dikirim</p>
                         </div>
-                        <button type="button" onClick={() => { setStagedFile(null); setFilePreview(null); }} className="absolute top-2 right-2 p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-full transition-all"><X size={14} /></button>
+                        <button type="button" onClick={() => { setStagedFile(null); setFilePreview(null); }} className="absolute top-1 sm:top-2 right-1 sm:right-2 p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-full transition-all"><X size={12} /></button>
                       </div>
                     </div>
                   )}
 
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                       <button type="button" onClick={() => { fileInputRef.current.accept = "image/*"; fileInputRef.current.click(); }} className="p-2.5 text-[var(--text-secondary)] hover:bg-white/10 rounded-xl"><ImageIcon size={22} /></button>
-                       <button type="button" onClick={() => { fileInputRef.current.accept = "*/*"; fileInputRef.current.click(); }} className="p-2.5 text-[var(--text-secondary)] hover:bg-white/10 rounded-xl"><Paperclip size={22} /></button>
+                  <div className="flex items-center gap-2 sm:gap-4">
+                    <div className="flex items-center gap-0.5 sm:gap-1">
+                       <button type="button" onClick={() => { fileInputRef.current.accept = "image/*"; fileInputRef.current.click(); }} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:bg-white/10 rounded-xl" title="Gambar"><ImageIcon size={20} /></button>
+                       <button type="button" onClick={() => { fileInputRef.current.accept = "*/*"; fileInputRef.current.click(); }} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:bg-white/10 rounded-xl" title="File"><Paperclip size={20} /></button>
                     </div>
                     
                     <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
 
                     <div className="flex-1 relative">
-                       <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Ketik sesuatu..." className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-2xl pl-5 pr-12 py-4 text-sm text-[var(--text-primary)] focus:border-purple-500 shadow-inner" />
-                       <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-purple-500"><Smile size={22} /></button>
+                       <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Ketik pesan..." className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl sm:rounded-2xl pl-4 pr-10 py-3 sm:py-4 text-xs sm:text-sm text-[var(--text-primary)] focus:outline-none focus:border-purple-500 transition-all shadow-inner" />
+                       <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-purple-500 hidden sm:block"><Smile size={20} /></button>
                     </div>
                     
-                    <button type="submit" disabled={(!newMessage.trim() && !stagedFile) || sending} className="p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl shadow-xl active:scale-95 transition-all disabled:opacity-50">
-                      {sending ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send size={24} className="ml-1" />}
+                    <button type="submit" disabled={(!newMessage.trim() && !stagedFile) || sending} className="p-3 sm:p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl sm:rounded-2xl shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center shrink-0">
+                      {sending ? <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send size={20} className="sm:ml-1" />}
                     </button>
                   </div>
                 </form>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-10">
-               <div className="w-32 h-32 bg-purple-600/5 rounded-[3rem] flex items-center justify-center mb-10 border border-purple-500/10"><MessageCircle size={56} className="text-purple-500" /></div>
-               <h3 className="text-3xl font-black text-[var(--text-primary)] mb-4">Kotak Masuk KaryaNusa</h3>
-               <p className="max-w-md text-[var(--text-secondary)] font-medium">Pilih teman bicara untuk mulai berbagi file digital secara real-time.</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 sm:p-10">
+               <div className="w-24 h-24 sm:w-32 sm:h-32 bg-purple-600/5 rounded-[2.5rem] sm:rounded-[3rem] flex items-center justify-center mb-6 sm:mb-10 border border-purple-500/10"><MessageCircle size={40} className="text-purple-500" /></div>
+               <h3 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] mb-3 sm:mb-4">Kotak Masuk KaryaNusa</h3>
+               <p className="max-w-xs sm:max-w-md text-sm sm:text-base text-[var(--text-secondary)] font-medium">Pilih teman bicara untuk mulai berbagi file digital secara real-time.</p>
             </div>
           )}
         </div>

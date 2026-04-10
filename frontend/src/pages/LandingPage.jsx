@@ -52,45 +52,45 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero — teks kiri, LOGO kanan */}
-      <section className="pt-28 pb-16 px-4 relative overflow-hidden">
+      <section className="pt-24 sm:pt-32 pb-12 sm:pb-16 px-4 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-purple-600/10 dark:bg-purple-600/20 rounded-full blur-3xl transition-colors" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-600/10 dark:bg-cyan-600/20 rounded-full blur-3xl transition-colors" />
+          <div className="absolute top-1/3 left-1/4 w-72 h-72 sm:w-96 sm:h-96 bg-purple-600/10 dark:bg-purple-600/20 rounded-full blur-3xl transition-colors" />
+          <div className="absolute bottom-1/4 right-1/4 w-72 h-72 sm:w-96 sm:h-96 bg-cyan-600/10 dark:bg-cyan-600/20 rounded-full blur-3xl transition-colors" />
         </div>
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-10 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full text-sm text-purple-300 mb-6">
-                <Zap size={14} /> Marketplace Produk Digital Terpercaya
+            <div className="text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full text-xs text-purple-300 mb-6">
+                <Zap size={14} /> Marketplace Produk Digital Nusantara
               </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-5 leading-tight">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold mb-5 leading-tight">
                 Akses <span className="gradient-text">Aset Digital</span> Tanpa Batas
               </h1>
-              <p className="text-lg text-[var(--text-secondary)] mb-8 max-w-lg">
+              <p className="text-sm sm:text-lg text-[var(--text-secondary)] mb-8 max-w-lg mx-auto lg:mx-0">
                 Temukan ribuan karya dan materi edukasi pilihan dari kreator terpercaya. Beli, unduh, dan nikmati langsung dari perangkat Anda kapan saja.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/register" className="btn-primary px-8 py-4 rounded-xl text-white font-semibold flex items-center justify-center gap-2 text-lg">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link to="/register" className="btn-primary px-8 py-3.5 sm:py-4 rounded-xl text-white font-semibold flex items-center justify-center gap-2 text-base sm:text-lg">
                   Mulai Belanja <ArrowRight size={20} />
                 </Link>
-                <Link to="/login" className="px-8 py-4 rounded-xl glass text-[var(--text-primary)] font-semibold flex items-center justify-center gap-2 text-lg hover:bg-[var(--card-hover-bg)] transition-colors">
+                <Link to="/login" className="px-8 py-3.5 sm:py-4 rounded-xl glass text-[var(--text-primary)] font-semibold flex items-center justify-center gap-2 text-base sm:text-lg hover:bg-[var(--card-hover-bg)] transition-colors">
                   Masuk ke Akun
                 </Link>
               </div>
             </div>
-            {/* Logo sebagai hero visual */}
-            <div className="relative flex items-center justify-center">
-              <div className="absolute w-80 h-80 bg-purple-600/20 rounded-full blur-3xl" />
-              <div className="relative z-10 flex flex-col items-center glass rounded-3xl p-12 shadow-2xl shadow-purple-900/40 border border-white/10">
+            {/* Logo sebagai hero visual — Disembunyikan di Mobile sesuai permintaan USER */}
+            <div className="hidden lg:flex relative items-center justify-center order-first lg:order-last mb-8 lg:mb-0">
+              <div className="absolute w-64 h-64 sm:w-80 sm:h-80 bg-purple-600/20 rounded-full blur-3xl" />
+              <div className="relative z-10 flex flex-col items-center glass rounded-3xl p-8 sm:p-12 shadow-2xl shadow-purple-900/40 border border-white/10">
                 <img
                   src={logo}
                   alt="KaryaNusa Logo"
-                  className="w-40 h-40 object-contain drop-shadow-2xl mb-6"
+                  className="w-24 h-24 sm:w-40 sm:h-40 object-contain drop-shadow-2xl mb-6 animate-pulse-slow"
                 />
-                <h2 className="text-3xl font-bold gradient-text mb-2">KaryaNusa</h2>
-                <p className="text-[var(--text-secondary)] text-center text-sm">Marketplace Digital Indonesia</p>
+                <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-2">KaryaNusa</h2>
+                <p className="text-[var(--text-secondary)] text-center text-xs sm:text-sm">Digitalizing The Nation's Creativity</p>
                 <div className="flex gap-6 mt-6">
-                  <p className="text-[var(--text-secondary)] text-center text-xs italic">Aman • Transparan • Terdesentralisasi</p>
+                  <p className="text-[var(--text-secondary)] text-center text-[10px] sm:text-xs italic opacity-70">Aman • Transparan • Terdesentralisasi</p>
                 </div>
               </div>
             </div>
@@ -99,13 +99,13 @@ export default function LandingPage() {
       </section>
 
       {/* Highlights */}
-      <section className="py-14 px-4">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-5">
+      <section className="py-10 sm:py-14 px-4">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {highlights.map((item) => (
-            <div key={item.title} className="glass rounded-2xl p-6 text-center card-hover">
-              <item.Icon size={28} className="text-purple-400 mx-auto mb-3" />
-              <div className="text-sm font-semibold text-[var(--text-primary)] mb-1">{item.title}</div>
-              <div className="text-[var(--text-secondary)] text-xs leading-relaxed">{item.desc}</div>
+            <div key={item.title} className="glass rounded-2xl p-6 text-center card-hover border border-white/5">
+              <item.Icon size={24} className="text-purple-400 mx-auto mb-3" />
+              <div className="text-sm font-bold text-[var(--text-primary)] mb-1">{item.title}</div>
+              <div className="text-[var(--text-secondary)] text-xs leading-relaxed opacity-80">{item.desc}</div>
             </div>
           ))}
         </div>

@@ -138,12 +138,12 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
           <X size={20} />
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 lg:p-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 p-4 sm:p-6 lg:p-10">
           
           {/* Kolom Kiri: Galeri Foto (4/12) */}
           <div className="lg:col-span-4 space-y-4">
             <div 
-              className="aspect-square rounded-3xl overflow-hidden glass border border-[var(--border-color)] shadow-sm relative group cursor-zoom-in"
+              className="aspect-square rounded-2xl sm:rounded-3xl overflow-hidden glass border border-[var(--border-color)] shadow-sm relative group cursor-zoom-in"
               onClick={() => setLightboxOpen(true)}
             >
               <img src={currentImage} alt={product.name}
@@ -155,13 +155,13 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                 <>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => (prev === 0 ? productImages.length - 1 : prev - 1)); }}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white rounded-full sm:opacity-0 group-hover:opacity-100 transition-all"
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => (prev === productImages.length - 1 ? 0 : prev + 1)); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white rounded-full sm:opacity-0 group-hover:opacity-100 transition-all"
                   >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
                   </button>
@@ -169,7 +169,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                   {/* Indicators */}
                   <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5">
                     {productImages.map((_, idx) => (
-                      <div key={idx} className={`w-2 h-2 rounded-full transition-all ${idx === currentImageIndex ? 'bg-white scale-125' : 'bg-white/50'}`} />
+                      <div key={idx} className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all ${idx === currentImageIndex ? 'bg-white scale-125' : 'bg-white/50'}`} />
                     ))}
                   </div>
                 </>
@@ -183,7 +183,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                   <button 
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${idx === currentImageIndex ? 'border-purple-500' : 'border-transparent opacity-60 hover:opacity-100 bg-black/5'}`}
+                    className={`shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all ${idx === currentImageIndex ? 'border-purple-500' : 'border-transparent opacity-60 hover:opacity-100 bg-black/5'}`}
                   >
                     <img src={img} alt={`thumb-${idx}`} className="w-full h-full object-cover" />
                   </button>
@@ -193,37 +193,37 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
           </div>
 
           {/* Kolom Tengah: Info Utama (5/12) */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-5 space-y-5 sm:space-y-6">
             <div>
-              <h2 className="text-3xl font-black text-[var(--text-primary)] leading-tight mb-2">{product.name}</h2>
+              <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] leading-tight mb-2">{product.name}</h2>
               <div className="flex items-center gap-3 text-sm flex-wrap">
                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/10 text-yellow-500 rounded-lg">
                   <Star size={14} className="fill-yellow-500" />
                   <span className="font-bold">{avgRating.toFixed(1)}</span>
-                  <span className="opacity-60 font-normal">({ratings.length} Rating)</span>
+                  <span className="opacity-60 font-normal text-xs sm:text-sm">({ratings.length} Rating)</span>
                 </div>
                 <div className="w-1 h-1 rounded-full bg-[var(--border-color)]" />
-                <span className="text-[var(--text-secondary)] font-medium">Terjual <span className="text-[var(--text-primary)]">{sold}</span></span>
+                <span className="text-[var(--text-secondary)] font-medium text-xs sm:text-sm">Terjual <span className="text-[var(--text-primary)]">{sold}</span></span>
               </div>
             </div>
 
-            <div className="py-4 border-y border-[var(--border-color)]">
-                <p className="text-4xl font-black gradient-text tracking-tight">{formatPrice(product.price)}</p>
+            <div className="py-3 sm:py-4 border-y border-[var(--border-color)]">
+                <p className="text-3xl sm:text-4xl font-black gradient-text tracking-tight">{formatPrice(product.price)}</p>
             </div>
 
             {/* Content Tabs */}
             <div className="space-y-4">
-               <div className="flex gap-6 border-b border-[var(--border-color)]">
+               <div className="flex gap-4 sm:gap-6 border-b border-[var(--border-color)]">
                   <button 
                     onClick={() => setActiveTab('detail')}
-                    className={`pb-3 text-sm font-bold transition-all relative ${activeTab === 'detail' ? 'text-purple-500' : 'text-[var(--text-secondary)]'}`}
+                    className={`pb-2 sm:pb-3 text-xs sm:text-sm font-bold transition-all relative ${activeTab === 'detail' ? 'text-purple-500' : 'text-[var(--text-secondary)]'}`}
                   >
                     Detail Produk
                     {activeTab === 'detail' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-purple-500 rounded-full" />}
                   </button>
                   <button 
                     onClick={() => setActiveTab('ulasan')}
-                    className={`pb-3 text-sm font-bold transition-all relative ${activeTab === 'ulasan' ? 'text-purple-500' : 'text-[var(--text-secondary)]'}`}
+                    className={`pb-2 sm:pb-3 text-xs sm:text-sm font-bold transition-all relative ${activeTab === 'ulasan' ? 'text-purple-500' : 'text-[var(--text-secondary)]'}`}
                   >
                     Ulasan ({ratings.length})
                     {activeTab === 'ulasan' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-purple-500 rounded-full" />}
@@ -232,7 +232,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
 
                {activeTab === 'detail' ? (
                  <div className="space-y-4 animate-in fade-in duration-300">
-                    <div className="grid grid-cols-2 gap-y-2 text-sm">
+                    <div className="grid grid-cols-2 gap-y-2 text-xs sm:text-sm">
                       <span className="text-[var(--text-secondary)]">Kategori</span>
                       <span className="text-[var(--text-primary)] font-medium text-right lg:text-left">{product.category || 'Digital'}</span>
                       <span className="text-[var(--text-secondary)]">Toko</span>
@@ -245,7 +245,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                       </Link>
                     </div>
                     <div className="pt-2">
-                       <p className="text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap text-[15px]">
+                       <p className="text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap text-sm sm:text-[15px]">
                           {description}
                        </p>
                     </div>
@@ -254,8 +254,8 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                  <div className="space-y-4 animate-in fade-in duration-300">
                    {/* Review Form - Only for Buyers */}
                    {user?.role === 'buyer' && (
-                     <form onSubmit={handleSubmitReview} className="p-4 bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] space-y-3">
-                       <p className="text-sm font-bold text-[var(--text-primary)]">Tulis Ulasan</p>
+                     <form onSubmit={handleSubmitReview} className="p-3 sm:p-4 bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] space-y-3">
+                       <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)]">Tulis Ulasan</p>
                        
                        {/* Star Selector */}
                        <div className="flex items-center gap-1">
@@ -269,7 +269,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                              className="p-0.5 transition-transform hover:scale-125"
                            >
                              <Star
-                               size={22}
+                               size={20}
                                className={`transition-colors ${
                                  s <= (reviewHover || reviewScore)
                                    ? 'text-yellow-400 fill-yellow-400'
@@ -279,7 +279,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                            </button>
                          ))}
                          {reviewScore > 0 && (
-                           <span className="text-xs text-[var(--text-secondary)] ml-2 font-medium">
+                           <span className="text-[10px] sm:text-xs text-[var(--text-secondary)] ml-2 font-medium">
                              {reviewScore === 1 ? 'Buruk' : reviewScore === 2 ? 'Kurang' : reviewScore === 3 ? 'Cukup' : reviewScore === 4 ? 'Bagus' : 'Sangat Bagus'}
                            </span>
                          )}
@@ -289,16 +289,16 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                        <textarea
                          value={reviewComment}
                          onChange={(e) => setReviewComment(e.target.value)}
-                         placeholder="Bagikan pengalamanmu tentang produk ini..."
-                         rows={3}
-                         className="w-full bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-purple-500 transition-all resize-none"
+                         placeholder="Bagikan pengalamanmu..."
+                         rows={2}
+                         className="w-full bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-purple-500 transition-all resize-none"
                        />
 
                        {/* Submit Button */}
                        <button
                          type="submit"
                          disabled={reviewLoading || reviewScore === 0}
-                         className="btn-primary px-5 py-2.5 rounded-xl text-white text-sm font-bold flex items-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                         className="btn-primary w-full sm:w-auto px-5 py-2 rounded-xl text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
                        >
                          {reviewLoading ? (
                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -312,24 +312,24 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
 
                    {/* Existing Reviews List */}
                    {ratings.length === 0 ? (
-                     <div className="py-8 text-center bg-[var(--card-bg)] rounded-3xl border border-[var(--border-color)]">
-                        <MessageCircle size={32} className="mx-auto text-[var(--border-color)] mb-2" />
-                        <p className="text-[var(--text-secondary)] text-sm">Belum ada ulasan untuk produk ini.</p>
+                     <div className="py-6 sm:py-8 text-center bg-[var(--card-bg)] rounded-3xl border border-[var(--border-color)]">
+                        <MessageCircle size={28} className="mx-auto text-[var(--border-color)] mb-2" />
+                        <p className="text-[var(--text-secondary)] text-xs sm:text-sm">Belum ada ulasan.</p>
                      </div>
                    ) : (
                      <div className="space-y-3">
                         {ratings.map((r, i) => (
-                          <div key={i} className="p-4 bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)]">
+                          <div key={i} className="p-3 sm:p-4 bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)]">
                             <div className="flex items-center gap-2 mb-2">
-                              <div className="w-8 h-8 btn-primary rounded-full flex items-center justify-center text-xs text-white">
-                                {r.user[0].toUpperCase()}
+                              <div className="w-7 h-7 sm:w-8 sm:h-8 btn-primary rounded-full flex items-center justify-center text-[10px] sm:text-xs text-white uppercase">
+                                {r.user[0]}
                               </div>
-                              <span className="font-bold text-sm text-[var(--text-primary)]">{r.user}</span>
+                              <span className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">{r.user}</span>
                               <div className="flex gap-0.5 ml-auto">
-                                {[1,2,3,4,5].map(s => <Star key={s} size={10} className={s <= r.score ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />)}
+                                {[1,2,3,4,5].map(s => <Star key={s} size={8} className={s <= r.score ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />)}
                               </div>
                             </div>
-                            <p className="text-sm text-[var(--text-secondary)]">{r.comment}</p>
+                            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">{r.comment}</p>
                           </div>
                         ))}
                      </div>
@@ -341,54 +341,55 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
 
           {/* Kolom Kanan: Checkout Card (3/12) */}
           <div className="lg:col-span-3">
-             <div className="glass rounded-[2rem] p-6 border border-[var(--border-color)] shadow-xl sticky top-0">
-               <h3 className="font-black text-[var(--text-primary)] mb-6 text-lg">Atur jumlah dan catatan</h3>
+             <div className="glass rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 border border-[var(--border-color)] shadow-xl lg:sticky lg:top-0">
+               <h3 className="hidden lg:block font-black text-[var(--text-primary)] mb-6 text-lg">Atur jumlah dan catatan</h3>
+               <h3 className="lg:hidden font-bold text-[var(--text-primary)] mb-4 text-sm">Beli Produk Ini</h3>
                
-               <div className="space-y-6">
+               <div className="space-y-5 sm:space-y-6">
                  {/* Qty Selector */}
-                 <div className="flex items-center gap-4">
-                    <div className="flex items-center bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-1">
+                 <div className="flex items-center justify-between sm:justify-start gap-4">
+                    <div className="flex items-center bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-0.5 sm:p-1">
                       <button 
                         onClick={() => setQty(Math.max(1, qty - 1))}
-                        className="p-2 hover:bg-white/5 rounded-lg transition-colors text-purple-500 disabled:opacity-30"
+                        className="p-1.5 sm:p-2 hover:bg-white/5 rounded-lg transition-colors text-purple-500 disabled:opacity-30"
                         disabled={qty <= 1}
                       >
-                        <Minus size={16} />
+                        <Minus size={14} />
                       </button>
                       <input 
                         type="number" 
                         value={qty}
                         onChange={(e) => setQty(Math.max(1, Math.min(stock, parseInt(e.target.value) || 1)))}
-                        className="w-12 text-center bg-transparent border-none focus:ring-0 font-bold text-[var(--text-primary)]"
+                        className="w-10 sm:w-12 text-center bg-transparent border-none focus:ring-0 font-bold text-[var(--text-primary)] text-sm sm:text-base"
                       />
                       <button 
                         onClick={() => setQty(Math.min(stock, qty + 1))}
-                        className="p-2 hover:bg-white/5 rounded-lg transition-colors text-purple-500 disabled:opacity-30"
+                        className="p-1.5 sm:p-2 hover:bg-white/5 rounded-lg transition-colors text-purple-500 disabled:opacity-30"
                         disabled={qty >= stock}
                       >
-                        <Plus size={16} />
+                        <Plus size={14} />
                       </button>
                     </div>
-                    <p className="text-sm text-[var(--text-secondary)] font-medium">Stok Total: <span className="text-[var(--text-primary)] font-bold">{stock}</span></p>
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium shrink-0">Stok: <span className="text-[var(--text-primary)] font-bold">{stock}</span></p>
                  </div>
 
                  {/* Price Calculation */}
-                 <div className="flex items-center justify-between py-4 border-t border-[var(--border-color)]">
-                    <span className="text-[var(--text-secondary)] font-medium">Subtotal</span>
-                    <span className="text-xl font-black text-[var(--text-primary)]">{formatPrice(product.price * qty)}</span>
+                 <div className="flex items-center justify-between py-3 sm:py-4 border-t border-[var(--border-color)]">
+                    <span className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">Subtotal</span>
+                    <span className="text-lg sm:text-xl font-black text-[var(--text-primary)]">{formatPrice(product.price * qty)}</span>
                  </div>
 
                  {/* Action Buttons */}
-                 <div className="space-y-3">
+                 <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
                     <button 
                       onClick={handleAddToCart}
-                      className="w-full btn-primary py-3.5 rounded-2xl text-white font-black shadow-lg shadow-purple-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                      className="w-full btn-primary py-3 rounded-xl sm:rounded-2xl text-white font-black shadow-lg shadow-purple-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
                     >
-                      <Plus size={18} /> Keranjang
+                      <Plus size={16} className="hidden sm:block" /> Keranjang
                     </button>
                     <button 
                       onClick={handleBuyNow}
-                      className="w-full py-3.5 rounded-2xl border-2 border-purple-500/50 text-purple-500 font-bold hover:bg-purple-500 hover:text-white transition-all">
+                      className="w-full py-3 rounded-xl sm:rounded-2xl border-2 border-purple-500/50 text-purple-500 font-bold hover:bg-purple-500 hover:text-white transition-all text-xs sm:text-sm">
                       Beli Langsung
                     </button>
                  </div>
@@ -398,9 +399,9 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                    <div className="flex items-center justify-center pt-4 border-t border-[var(--border-color)]">
                     <button 
                       onClick={handleWishlist}
-                      className={`flex items-center gap-2 text-sm font-bold transition-colors ${isWishlisted ? 'text-red-500' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+                      className={`flex items-center gap-2 text-xs font-bold transition-colors ${isWishlisted ? 'text-red-500' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                     >
-                       <Heart size={16} fill={isWishlisted ? 'currentColor' : 'none'} /> 
+                       <Heart size={14} fill={isWishlisted ? 'currentColor' : 'none'} /> 
                        {isWishlisted ? 'Hapus dari Wishlist' : 'Tambah ke Wishlist'}
                     </button>
                    </div>
