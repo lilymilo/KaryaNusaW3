@@ -28,4 +28,9 @@ app.use('/api/chat', chatRoutes);
 app.get('/api/health', (req, res) => res.json({ status: 'ok', database: 'supabase' }));
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server run at port ${PORT}`));
+
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => console.log(`Server run at port ${PORT}`));
+}
+
+export default app;
