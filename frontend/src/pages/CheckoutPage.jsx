@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MapPin, Phone, CreditCard, Wallet, Building2, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import api from '../api/axios';
@@ -13,19 +13,55 @@ const PAYMENT_METHODS = [
   { id: 'e_wallet', label: 'E-Wallet', icon: Wallet, desc: 'GoPay, OVO, Dana' },
 ];
 
+const validateWA = (num) => {
+  let cleaned = num.replace(/\D/g, '');
+  if (cleaned.startsWith('0')) cleaned = '62' + cleaned.substring(1);
+  const waRegex = /^628[1-9]\d{7,11}$/;
+  return waRegex.test(cleaned) ? cleaned : null;
+};
+
 export default function CheckoutPage() {
   const { cart, cartTotal } = useCart();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ address: '', phone: '', paymentMethod: '' });
+  const location = useLocation();
+  const directItem = location.state?.directItem;
+
+  const [form, setForm] = useState({ delivery_email: '', phone: '', paymentMethod: '', notes: '' });
   const [loading, setLoading] = useState(false);
+
+  // Derive products and totals from either directItem or cart
+  const checkoutItems = directItem ? [directItem] : cart;
+  const checkoutTotal = directItem ? (directItem.products.price * directItem.quantity) : cartTotal;
+  const isDirect = !!directItem;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.address || !form.phone || !form.paymentMethod)
-      return toast.error('Semua field wajib diisi');
+    if (!form.delivery_email || !form.phone || !form.paymentMethod)
+      return toast.error('Email pengiriman, nomor telepon, dan metode pembayaran wajib diisi');
+    
+    const validatedPhone = validateWA(form.phone);
+    if (!validatedPhone) {
+      return toast.error('Nomor WhatsApp tidak valid (Gunakan format 08xx atau +628xx)');
+    }
+
     setLoading(true);
     try {
-      await api.post('/orders', form);
+      const payload = {
+        items: checkoutItems.map(item => ({
+          productId: item.product_id,
+          quantity: item.quantity,
+          price: item.products?.price,
+          name: item.products?.name
+        })),
+        total_amount: checkoutTotal,
+        delivery_email: form.delivery_email,
+        phone: validatedPhone,
+        payment_method: form.paymentMethod,
+        notes: form.notes,
+        is_direct: isDirect
+      };
+
+      await api.post('/orders', payload);
       toast.success('Pesanan berhasil dibuat!');
       navigate('/orders');
     } catch (err) {
@@ -35,7 +71,7 @@ export default function CheckoutPage() {
     }
   };
 
-  if (cart.length === 0) {
+  if (checkoutItems.length === 0) {
     return (
       <div className="min-h-screen bg-[var(--bg-color)] transition-colors duration-300 flex items-center justify-center">
         <div className="text-center">
@@ -63,22 +99,28 @@ export default function CheckoutPage() {
             {/* Shipping */}
             <div className="glass rounded-2xl p-6 border border-[var(--border-color)]">
               <h2 className="font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                <MapPin size={18} className="text-purple-400" /> Informasi Pengiriman
+                <ShoppingBag size={18} className="text-purple-400" /> Informasi Pengiriman Digital
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-[var(--text-secondary)] mb-2">Alamat Lengkap</label>
-                  <textarea rows={3} placeholder="Jl. Contoh No. 123, Kota, Provinsi"
-                    value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
-                    className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] opacity-70 focus:opacity-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none transition-all" />
+                  <label className="block text-sm text-[var(--text-secondary)] mb-2">Email Pengiriman (Untuk akses link/file)</label>
+                  <input type="email" placeholder="contoh@email.com"
+                    value={form.delivery_email} onChange={e => setForm({ ...form, delivery_email: e.target.value })}
+                    className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] opacity-70 focus:opacity-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm text-[var(--text-secondary)] mb-2">
-                    <Phone size={14} className="inline mr-1" /> Nomor Telepon
+                    <Phone size={14} className="inline mr-1" /> Nomor Telepon / WA
                   </label>
                   <input type="tel" placeholder="08xxxxxxxxxx"
                     value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
                     className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] opacity-70 focus:opacity-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm text-[var(--text-secondary)] mb-2">Catatan Pesanan (Opsional)</label>
+                  <textarea rows={2} placeholder="Instruksi tambahan..."
+                    value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
+                    className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] opacity-70 focus:opacity-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none transition-all" />
                 </div>
               </div>
             </div>
@@ -124,17 +166,17 @@ export default function CheckoutPage() {
             <div className="glass rounded-2xl p-6 sticky top-24 border border-[var(--border-color)]">
               <h2 className="font-semibold text-[var(--text-primary)] mb-4">Ringkasan Pesanan</h2>
               <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
-                {cart.map(item => (
-                  <div key={item.productId} className="flex gap-3">
-                    <img src={item.image} alt={item.name}
+                {checkoutItems.map(item => (
+                  <div key={item.id || item.product_id} className="flex gap-3">
+                    <img src={item.products?.image} alt={item.products?.name}
                       className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
                       onError={e => { e.target.src = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400'; }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[var(--text-primary)] line-clamp-1">{item.name}</p>
+                      <p className="text-sm text-[var(--text-primary)] line-clamp-1">{item.products?.name}</p>
                       <p className="text-xs text-[var(--text-secondary)] opacity-60">x{item.quantity}</p>
                     </div>
                     <p className="text-sm text-purple-400 font-medium whitespace-nowrap">
-                      {formatPrice(item.price * item.quantity)}
+                      {formatPrice((item.products?.price || 0) * item.quantity)}
                     </p>
                   </div>
                 ))}
@@ -142,7 +184,7 @@ export default function CheckoutPage() {
               <div className="border-t border-[var(--border-color)] pt-4 mb-6">
                 <div className="flex justify-between items-center">
                   <span className="text-[var(--text-secondary)]">Total Pembayaran</span>
-                  <span className="text-xl font-bold gradient-text">{formatPrice(cartTotal)}</span>
+                  <span className="text-xl font-bold gradient-text">{formatPrice(checkoutTotal)}</span>
                 </div>
               </div>
               <button onClick={handleSubmit} disabled={loading}

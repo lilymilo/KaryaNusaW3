@@ -34,13 +34,21 @@ ON CONFLICT (id) DO NOTHING;
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, role)
+  INSERT INTO public.profiles (id, email, full_name, username, shop_name, phone_number, role)
   VALUES (
     NEW.id, 
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', 'User'),
-    'buyer'
-  ) ON CONFLICT (id) DO NOTHING;
+    NEW.raw_user_meta_data->>'username',
+    NEW.raw_user_meta_data->>'shop_name',
+    NEW.raw_user_meta_data->>'phone_number',
+    COALESCE(NEW.raw_user_meta_data->>'role', 'buyer')
+  ) ON CONFLICT (id) DO UPDATE SET
+    full_name = EXCLUDED.full_name,
+    username = EXCLUDED.username,
+    shop_name = EXCLUDED.shop_name,
+    phone_number = EXCLUDED.phone_number,
+    role = EXCLUDED.role;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

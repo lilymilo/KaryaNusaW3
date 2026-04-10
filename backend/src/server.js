@@ -7,6 +7,8 @@ import orderRoutes from './routes/orderRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import wishlistRoutes from './routes/wishlistRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
+import shopRoutes from './routes/shopRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
 
 dotenv.config();
 const app = express();
@@ -20,6 +22,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/shop', shopRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', database: 'supabase' }));
 

@@ -134,7 +134,7 @@ export const createProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, description, category, stock } = req.body;
+    const { name, price, description, category, stock, existing_images } = req.body;
     
     let updateData = {};
     if (name) updateData.name = name;
@@ -143,10 +143,19 @@ export const updateProduct = async (req, res) => {
     if (category) updateData.category = category;
     if (stock !== undefined) updateData.stock = Number(stock);
 
+    let oldImages = [];
+    if (existing_images) {
+      try {
+        oldImages = JSON.parse(existing_images);
+      } catch (e) {
+        console.error("Failed to parse existing_images", e);
+      }
+    }
+
     const authSupabase = getAuthClient(req);
 
     if (req.files && req.files.length > 0) {
-      let imagesArr = [];
+      let imagesArr = [...oldImages];
       for (const file of req.files) {
         const fileExt = file.originalname.split('.').pop();
         const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
@@ -169,6 +178,9 @@ export const updateProduct = async (req, res) => {
       }
       updateData.image = imagesArr[0];
       updateData.images = imagesArr;
+    } else if (existing_images) {
+      updateData.image = oldImages[0] || null;
+      updateData.images = oldImages;
     }
 
     const { data, error } = await authSupabase

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Star, ShoppingCart, Package, User, Heart, Plus, Minus, MessageCircle, Share2, Send } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -11,6 +12,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [isWishlisted, setIsWishlisted] = useState(initialWishlisted);
+  const navigate = useNavigate();
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState('detail');
@@ -46,7 +48,6 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
 
   const productImages = product?.images?.length ? product.images : [product?.image];
   const currentImage = productImages[currentImageIndex] || product?.image;
-
   const handleAddToCart = async () => {
     if (!user) return toast.error('Login terlebih dahulu');
     try {
@@ -56,6 +57,24 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
     } catch {
       toast.error('Gagal menambahkan ke keranjang');
     }
+  };
+
+  const handleBuyNow = () => {
+    if (!user) return toast.error('Login terlebih dahulu');
+    
+    const directItem = {
+      product_id: product.id,
+      quantity: qty,
+      products: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: productImages[0] || product.image
+      }
+    };
+
+    navigate('/checkout', { state: { directItem } });
+    onClose();
   };
 
   const handleWishlist = async (e) => {
@@ -217,9 +236,13 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                       <span className="text-[var(--text-secondary)]">Kategori</span>
                       <span className="text-[var(--text-primary)] font-medium text-right lg:text-left">{product.category || 'Digital'}</span>
                       <span className="text-[var(--text-secondary)]">Toko</span>
-                      <span className="text-[var(--text-primary)] font-medium text-right lg:text-left">
+                      <Link 
+                        to={`/shop/${encodeURIComponent(product.profiles?.username || product.profiles?.shop_name || product.profiles?.full_name || product.seller_name)}`}
+                        className="text-purple-500 font-bold text-right lg:text-left hover:underline transition-all"
+                        onClick={onClose}
+                      >
                         {product.profiles?.shop_name || product.profiles?.full_name || product.sellerName || product.seller_name}
-                      </span>
+                      </Link>
                     </div>
                     <div className="pt-2">
                        <p className="text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap text-[15px]">
@@ -363,7 +386,9 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                     >
                       <Plus size={18} /> Keranjang
                     </button>
-                    <button className="w-full py-3.5 rounded-2xl border-2 border-purple-500/50 text-purple-500 font-bold hover:bg-purple-500 hover:text-white transition-all">
+                    <button 
+                      onClick={handleBuyNow}
+                      className="w-full py-3.5 rounded-2xl border-2 border-purple-500/50 text-purple-500 font-bold hover:bg-purple-500 hover:text-white transition-all">
                       Beli Langsung
                     </button>
                  </div>

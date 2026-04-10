@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, ToastBar, toast } from 'react-hot-toast';
+import { X } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
@@ -10,7 +11,10 @@ import HomePage from './pages/HomePage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrdersPage from './pages/OrdersPage';
 import CreateProductPage from './pages/CreateProductPage';
+import EditProductPage from './pages/EditProductPage';
 import ProfilePage from './pages/ProfilePage';
+import ShopPage from './pages/ShopPage';
+import ChatPage from './pages/ChatPage';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -42,7 +46,11 @@ function AppRoutes() {
       <Route path="/checkout" element={<PrivateRoute><CheckoutPage /></PrivateRoute>} />
       <Route path="/orders" element={<PrivateRoute><OrdersPage /></PrivateRoute>} />
       <Route path="/create-product" element={<PrivateRoute><CreateProductPage /></PrivateRoute>} />
+      <Route path="/edit-product/:id" element={<PrivateRoute><EditProductPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+      <Route path="/shop/:username" element={<PrivateRoute><ShopPage /></PrivateRoute>} />
+      <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+      <Route path="/chat/:username" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
@@ -57,7 +65,7 @@ export default function App() {
           <Toaster
             position="top-right"
             toastOptions={{
-              className: 'glass border border-[var(--border-color)] text-[var(--text-primary)] font-medium',
+              className: 'glass border border-[var(--border-color)] text-[var(--text-primary)] font-medium !pr-10',
               style: {
                 background: 'var(--card-bg)',
                 color: 'var(--text-primary)',
@@ -67,7 +75,27 @@ export default function App() {
               success: { iconTheme: { primary: '#8b5cf6', secondary: '#fff' } },
               error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
             }}
-          />
+          >
+            {(t) => (
+              <ToastBar toast={t}>
+                {({ icon, message }) => (
+                  <div className="flex items-center w-full">
+                    <div className="flex-shrink-0 mr-2">{icon}</div>
+                    <div className="flex-1 pr-4">{message}</div>
+                    {t.type !== 'loading' && (
+                      <button 
+                        onClick={() => toast.dismiss(t.id)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-[var(--text-secondary)] hover:text-red-500 transition-colors"
+                        aria-label="Tutup Notifikasi"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </ToastBar>
+            )}
+          </Toaster>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Package, PlusSquare, LogOut, User } from 'lucide-react';
+import { ShoppingCart, Package, PlusSquare, LogOut, User, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import logo from '../assets/logo.png';
@@ -45,6 +45,11 @@ export default function Navbar({ onCartOpen }) {
             <Package size={20} className="text-[var(--text-secondary)]" />
           </Link>
 
+          {/* Messages */}
+          <Link to="/chat" className="p-2 glass rounded-xl hover:bg-white/10 transition-colors hidden sm:block">
+            <MessageCircle size={20} className="text-[var(--text-secondary)]" />
+          </Link>
+
           {/* Create Product - Only for Sellers */}
           {user?.role === 'seller' && (
             <Link to="/create-product" className="p-2 glass rounded-xl hover:bg-white/10 transition-colors hidden sm:block">
@@ -55,6 +60,10 @@ export default function Navbar({ onCartOpen }) {
           {/* Mobile menu items */}
           <Link to="/orders" className="p-2 glass rounded-xl hover:bg-white/10 transition-colors sm:hidden">
             <Package size={20} className="text-[var(--text-secondary)]" />
+          </Link>
+          
+          <Link to="/chat" className="p-2 glass rounded-xl hover:bg-white/10 transition-colors sm:hidden">
+            <MessageCircle size={20} className="text-[var(--text-secondary)]" />
           </Link>
 
           {/* User */}

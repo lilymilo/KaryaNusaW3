@@ -1,13 +1,33 @@
 import { supabase, getAuthClient } from '../config/supabaseClient.js';
 
+const validateWA = (num) => {
+  if (!num) return null;
+  let cleaned = num.replace(/\D/g, '');
+  if (cleaned.startsWith('0')) cleaned = '62' + cleaned.substring(1);
+  const waRegex = /^628[1-9]\d{7,11}$/;
+  return waRegex.test(cleaned) ? cleaned : null;
+};
+
 export const register = async (req, res) => {
   const { email, password, full_name, shop_name, role, username, phone_number, shop_address, shop_contact } = req.body;
+
+  const validatedPhone = validateWA(phone_number);
+  if (phone_number && !validatedPhone) {
+    return res.status(400).json({ error: "Nomor WhatsApp tidak valid. Gunakan format 08xx atau +628xx" });
+  }
 
   // 1. Sistem auth supabase
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      data: {
+        full_name,
+        username,
+        shop_name,
+        phone_number: validatedPhone,
+        role: role || 'buyer'
+      },
       emailRedirectTo: `${req.headers.origin || 'http://localhost:5173'}/home`
     }
   });
@@ -30,7 +50,7 @@ export const register = async (req, res) => {
           shop_name: shop_name || null, 
           role: role || 'buyer', // Default ke buyer
           username: username || null,
-          phone_number: phone_number || null,
+          phone_number: validatedPhone,
           shop_address: shop_address || null,
           shop_contact: shop_contact || null
         }
@@ -127,6 +147,8 @@ export const getAccount = async (req, res) => {
       .eq('id', req.user.id)
       .single();
 
+    const metaAvatar = req.user.user_metadata?.avatar_url || req.user.user_metadata?.picture || null;
+
     // Jika profil tidak ditemukan (baru pertama kali login via Google)
     if (profileError && profileError.code === 'PGRST116') {
       const { data: newProfile, error: insertError } = await supabase
@@ -136,7 +158,8 @@ export const getAccount = async (req, res) => {
             id: req.user.id,
             email: req.user.email,
             full_name: req.user.user_metadata?.full_name || req.user.user_metadata?.name || 'User',
-            role: 'buyer' // Default role, akan diupdate oleh frontend jika perlu
+            avatar: metaAvatar,
+            role: 'buyer'
           }
         ])
         .select()
@@ -146,6 +169,18 @@ export const getAccount = async (req, res) => {
       profile = newProfile;
     } else if (profileError) {
       throw profileError;
+    } else {
+      // SINKRONISASI: Jika profil sudah ada tapi foto (avatar) di DB masih kosong, 
+      // sedangkan di metadata ada (dari Google dsb), kita update otomatis.
+      if (!profile.avatar && metaAvatar) {
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .update({ avatar: metaAvatar })
+          .eq('id', req.user.id)
+          .select()
+          .single();
+        if (updatedProfile) profile = updatedProfile;
+      }
     }
 
     console.log("Supabase User Metadata:", req.user.user_metadata);
@@ -194,7 +229,15 @@ export const updateProfile = async (req, res) => {
     // Map fields
     if (full_name) updateData.full_name = full_name;
     if (username) updateData.username = username;
-    if (phone_number) updateData.phone_number = phone_number;
+    
+    if (phone_number) {
+      const validatedPhone = validateWA(phone_number);
+      if (!validatedPhone) {
+        return res.status(400).json({ error: "Nomor WhatsApp tidak valid. Gunakan format 08xx atau +628xx" });
+      }
+      updateData.phone_number = validatedPhone;
+    }
+
     if (role) updateData.role = role;
     if (shop_name) updateData.shop_name = shop_name;
     if (shop_description) updateData.shop_description = shop_description;

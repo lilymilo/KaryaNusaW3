@@ -6,6 +6,14 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import ThemeToggle from '../components/ThemeToggle';
 
+const validateWA = (num) => {
+  if (!num) return null;
+  let cleaned = num.replace(/\D/g, '');
+  if (cleaned.startsWith('0')) cleaned = '62' + cleaned.substring(1);
+  const waRegex = /^628[1-9]\d{7,11}$/;
+  return waRegex.test(cleaned) ? cleaned : null;
+};
+
 export default function RegisterPage() {
   const { register, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
@@ -29,9 +37,15 @@ export default function RegisterPage() {
     if (form.password !== form.confirm) return toast.error('Konfirmasi password tidak cocok');
     if (form.password.length < 6) return toast.error('Password minimal 6 karakter');
     
+    // Validate Phone
+    const validatedPhone = validateWA(form.phone_number);
+    if (!validatedPhone) {
+      return toast.error('Nomor WhatsApp tidak valid (Gunakan format 08xx atau +628xx)');
+    }
+
     setLoading(true);
     try {
-      const res = await register({ ...form, role });
+      const res = await register({ ...form, phone_number: validatedPhone, role });
       if (res.needsConfirmation) {
         setIsSuccess(true);
       } else {

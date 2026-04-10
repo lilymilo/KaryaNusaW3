@@ -2,14 +2,23 @@ import { useState, useEffect } from 'react';
 import { 
   User, Store, Settings, Heart, Package, 
   TrendingUp, Home, Camera, Check, Save, 
-  Trash2, Edit, Plus, ExternalLink, ShoppingBag
+  Trash2, Edit, Plus, ExternalLink, ShoppingBag, ArrowLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Navbar';
 import CartDrawer from '../components/CartDrawer';
 import ProductCard from '../components/ProductCard';
+
+const validateWA = (num) => {
+  if (!num) return null;
+  let cleaned = num.replace(/\D/g, '');
+  if (cleaned.startsWith('0')) cleaned = '62' + cleaned.substring(1);
+  const waRegex = /^628[1-9]\d{7,11}$/;
+  return waRegex.test(cleaned) ? cleaned : null;
+};
 
 const formatPrice = (p) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p);
 
@@ -19,6 +28,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const navigate = useNavigate();
 
   // Forms State
   const [formData, setFormData] = useState({
@@ -78,6 +89,18 @@ export default function ProfilePage() {
     } catch (err) { console.error(err); }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+    try {
+      await api.delete(`/products/${productToDelete.id}`);
+      toast.success('Produk berhasil dihapus');
+      setMyProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      setProductToDelete(null);
+    } catch (err) {
+      toast.error('Gagal menghapus produk');
+    }
+  };
+
   const handleFileChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
@@ -88,10 +111,23 @@ export default function ProfilePage() {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    
+    // Validate Phone
+    const validatedPhone = validateWA(formData.phone_number);
+    if (formData.phone_number && !validatedPhone) {
+      return toast.error('Nomor WhatsApp tidak valid (Gunakan format 08xx atau +628xx)');
+    }
+
     setLoading(true);
     try {
       const data = new FormData();
-      Object.keys(formData).forEach(key => data.append(key, formData[key]));
+      Object.keys(formData).forEach(key => {
+        if (key === 'phone_number') {
+          data.append(key, validatedPhone);
+        } else {
+          data.append(key, formData[key]);
+        }
+      });
       if (files.avatar) data.append('avatar', files.avatar);
       if (files.shop_logo) data.append('shop_logo', files.shop_logo);
       if (files.shop_banner) data.append('shop_banner', files.shop_banner);
@@ -115,8 +151,16 @@ export default function ProfilePage() {
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
 
       {/* Header Profile */}
-      <div className="pt-24 pb-12 bg-gradient-to-b from-purple-500/10 to-transparent">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center gap-6">
+      <div className="pt-20 bg-gradient-to-b from-purple-500/10 to-transparent">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
+           <button 
+             onClick={() => navigate(-1)}
+             className="flex items-center gap-2 px-3 py-1.5 glass rounded-xl text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all mb-4"
+           >
+             <ArrowLeft size={18} /> Kembali
+           </button>
+        </div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center gap-6 pb-12">
           <div className="relative group">
             <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-purple-500/30 shadow-xl">
               <img src={previews.avatar || 'https://via.placeholder.com/150'} alt="Profile" className="w-full h-full object-cover" />
@@ -340,10 +384,10 @@ export default function ProfilePage() {
                           <p className="text-xs text-[var(--text-secondary)]">Stok: {p.stock} · Terjual: {p.sold}</p>
                         </div>
                         <div className="flex gap-2">
-                          <button className="p-2 glass text-[var(--text-secondary)] hover:text-purple-500 rounded-lg transition-colors">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/edit-product/${p.id}`); }} className="p-2 glass text-[var(--text-secondary)] hover:text-purple-500 rounded-lg transition-colors">
                             <Edit size={18} />
                           </button>
-                          <button className="p-2 glass text-red-500/70 hover:text-red-500 rounded-lg transition-colors">
+                          <button onClick={(e) => { e.stopPropagation(); setProductToDelete(p); }} className="p-2 glass text-red-500/70 hover:text-red-500 rounded-lg transition-colors">
                             <Trash2 size={18} />
                           </button>
                         </div>
@@ -410,6 +454,34 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {productToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setProductToDelete(null)}>
+          <div className="glass rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl transform transition-all scale-100" onClick={e => e.stopPropagation()}>
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
+                <Trash2 size={32} className="text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+              </div>
+              <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">Hapus Produk?</h3>
+              <p className="text-[var(--text-secondary)] text-sm mb-6">
+                Apakah Anda yakin ingin menghapus <strong>{productToDelete.name}</strong>? Tindakan ini tidak dapat dibatalkan.
+              </p>
+              <div className="flex gap-3 w-full">
+                <button 
+                  onClick={() => setProductToDelete(null)}
+                  className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-[var(--text-primary)] glass hover:bg-white/10 border border-[var(--border-color)] transition-colors">
+                  Batal
+                </button>
+                <button 
+                  onClick={handleDeleteProduct}
+                  className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-[0_4px_14px_rgba(239,68,68,0.4)]">
+                  Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

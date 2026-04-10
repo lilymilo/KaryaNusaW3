@@ -17,7 +17,7 @@ function RatingModal({ item, orderId, onClose, onSuccess }) {
   const submit = async () => {
     setLoading(true);
     try {
-      await api.post(`/products/${item.productId}/rating`, { score, comment });
+      await api.post(`/products/${item.product_id}/rating`, { score, comment });
       toast.success('Rating berhasil dikirim!');
       onSuccess();
       onClose();
@@ -69,8 +69,8 @@ export default function OrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const { data } = await api.get('/orders/my');
-      setOrders(data.reverse());
+      const { data } = await api.get('/orders');
+      setOrders(data);
     } catch { setOrders([]); }
     finally { setLoading(false); }
   };
@@ -87,8 +87,9 @@ export default function OrdersPage() {
 
       <div className="pt-20 max-w-4xl mx-auto px-4 sm:px-6 pb-12">
         <div className="py-8 flex items-center gap-4">
-          <button onClick={() => navigate('/home')} className="p-2 glass rounded-xl hover:bg-white/10 transition-colors">
-            <ArrowLeft size={20} className="text-gray-400" />
+          <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-2 glass rounded-xl hover:bg-white/10 transition-colors">
+            <ArrowLeft size={18} className="text-gray-400" />
+            <span className="text-sm font-medium text-[var(--text-secondary)]">Kembali</span>
           </button>
           <div>
             <h1 className="text-2xl font-bold text-[var(--text-primary)]">Pesanan Saya</h1>
@@ -123,7 +124,7 @@ export default function OrdersPage() {
                     <p className="text-sm font-mono text-[var(--text-secondary)]">{order.id.slice(0, 8).toUpperCase()}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500">{formatDate(order.createdAt)}</p>
+                    <p className="text-xs text-gray-500">{formatDate(order.created_at)}</p>
                     <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs mt-1">
                       <CheckCircle size={12} /> Selesai
                     </span>
@@ -131,16 +132,16 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="space-y-3 mb-4">
-                  {order.items.map((item, i) => (
+                  {order.order_items?.map((item, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)]">
-                      <img src={item.image} alt={item.name}
+                      <img src={item.products?.image} alt={item.products?.name}
                         className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
                         onError={e => { e.target.src = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400'; }} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--text-primary)] line-clamp-1">{item.name}</p>
+                        <p className="text-sm font-medium text-[var(--text-primary)] line-clamp-1">{item.products?.name}</p>
                         <p className="text-xs text-[var(--text-secondary)]">x{item.quantity} · {formatPrice(item.price)}</p>
                       </div>
-                      <button onClick={() => setRatingItem(item)}
+                      <button onClick={() => setRatingItem({ ...item, name: item.products?.name })}
                         className="flex items-center gap-1 px-3 py-1.5 glass rounded-lg text-xs text-yellow-400 hover:bg-yellow-400/10 transition-colors flex-shrink-0">
                         <Star size={12} /> Beri Rating
                       </button>
@@ -150,12 +151,12 @@ export default function OrdersPage() {
 
                 <div className="border-t border-[var(--border-color)] pt-4 flex items-center justify-between">
                   <div className="text-sm text-[var(--text-secondary)]">
-                    <p>{order.paymentMethod.replace('_', ' ').toUpperCase()}</p>
-                    <p className="text-xs opacity-60 mt-0.5 truncate max-w-48">{order.address}</p>
+                    <p>{order.payment_method?.replace('_', ' ').toUpperCase()}</p>
+                    <p className="text-xs opacity-60 mt-0.5 truncate max-w-48">{order.delivery_email}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Total</p>
-                    <p className="text-lg font-bold gradient-text">{formatPrice(order.total)}</p>
+                    <p className="text-lg font-bold gradient-text">{formatPrice(order.total_amount)}</p>
                   </div>
                 </div>
               </div>
