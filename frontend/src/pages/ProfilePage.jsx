@@ -263,8 +263,8 @@ export default function ProfilePage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-[var(--text-secondary)]">Alamat Toko</label>
-                          <input type="text" value={formData.shop_address} onChange={e => setFormData({...formData, shop_address: e.target.value})}
+                          <label className="text-sm font-medium text-[var(--text-secondary)]">Link Website / Portofolio</label>
+                          <input type="text" placeholder="https://..." value={formData.shop_address} onChange={e => setFormData({...formData, shop_address: e.target.value})}
                             className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] focus:outline-none focus:border-purple-500 transition-all" />
                         </div>
                         <div className="space-y-2">

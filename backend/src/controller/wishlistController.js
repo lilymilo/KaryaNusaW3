@@ -1,9 +1,10 @@
-import { supabase } from '../config/supabaseClient.js';
+import { getAuthClient } from '../config/supabaseClient.js';
 
 // 1. Ambil semua item di wishlist user
 export const getWishlist = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const authSupabase = getAuthClient(req);
+    const { data, error } = await authSupabase
       .from('wishlist')
       .select('*, products(*)')
       .eq('user_id', req.user.id);
@@ -19,18 +20,21 @@ export const getWishlist = async (req, res) => {
 export const toggleWishlist = async (req, res) => {
   try {
     const { productId } = req.body;
+    const authSupabase = getAuthClient(req);
 
     // Cek apakah sudah ada
-    const { data: existing, error: checkError } = await supabase
+    const { data: existing, error: checkError } = await authSupabase
       .from('wishlist')
       .select('*')
       .eq('user_id', req.user.id)
       .eq('product_id', productId)
-      .single();
+      .maybeSingle();
+
+    if (checkError) throw checkError;
 
     if (existing) {
       // Jika ada, hapus
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await authSupabase
         .from('wishlist')
         .delete()
         .eq('id', existing.id);
@@ -39,7 +43,7 @@ export const toggleWishlist = async (req, res) => {
       return res.json({ message: "Dihapus dari wishlist", active: false });
     } else {
       // Jika tidak ada, tambah
-      const { error: insertError } = await supabase
+      const { error: insertError } = await authSupabase
         .from('wishlist')
         .insert([{ user_id: req.user.id, product_id: productId }]);
       

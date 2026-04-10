@@ -22,7 +22,7 @@ export const register = async (req, res) => {
   if (authData.user) {
     const { error: profileError } = await supabase
       .from('profiles')
-      .insert([
+      .upsert([
         { 
           id: authData.user.id, // ID dari Auth
           email: email, // Store email for easier querying

@@ -12,6 +12,7 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
   const { user } = useAuth();
   const [isWishlisted, setIsWishlisted] = useState(initialWishlisted);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleAddToCart = async (e) => {
     e.stopPropagation();
@@ -42,7 +43,7 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
   };
 
   return (
-    <div onClick={onClick} className="glass rounded-2xl overflow-hidden card-hover cursor-pointer group border border-[var(--border-color)]">
+    <div onClick={onClick} className="glass relative rounded-2xl overflow-hidden card-hover cursor-pointer group border border-[var(--border-color)]">
       <div className="relative overflow-hidden h-48">
         <img src={product.image} alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -69,12 +70,9 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
           {/* Delete Button (for Owner) */}
           {user?.id === product.seller_id && (
             <button
-              onClick={async (e) => {
+              onClick={(e) => {
                 e.stopPropagation();
-                const confirmed = window.confirm('Apakah Anda yakin ingin menghapus ini?');
-                if (confirmed && typeof onDelete === 'function') {
-                  onDelete(product.id);
-                }
+                setShowDeleteConfirm(true);
               }}
               className="p-2 bg-red-500/80 hover:bg-red-600 backdrop-blur-sm rounded-full text-white transition-colors"
               title="Hapus Produk Ini"
@@ -93,11 +91,11 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
           <div className="flex items-center gap-1">
             {[1,2,3,4,5].map(i => (
               <Star key={i} size={12}
-                className={i <= Math.round(product.avgRating) ? 'text-yellow-400 fill-yellow-400' : 'text-[var(--text-secondary)] opacity-30'} />
+                className={i <= Math.round(product.avg_rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-[var(--text-secondary)] opacity-30'} />
             ))}
           </div>
           <span className="text-xs text-[var(--text-secondary)]">
-            {product.avgRating > 0 ? product.avgRating.toFixed(1) : 'Belum ada'} · {product.sold} terjual
+            {(product.avg_rating || 0) > 0 ? (product.avg_rating || 0).toFixed(1) : 'Belum ada'} · {product.sold} terjual
           </span>
         </div>
 
@@ -105,7 +103,7 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
           <div>
             <p className="text-lg font-bold gradient-text">{formatPrice(product.price)}</p>
             <p className="text-xs text-[var(--text-secondary)] opacity-70 flex items-center gap-1">
-              {product.sellerName}
+              {product.profiles?.shop_name || product.profiles?.full_name || product.seller_name || product.sellerName}
             </p>
           </div>
           <button onClick={handleAddToCart}
@@ -114,6 +112,39 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Overlay */}
+      {showDeleteConfirm && (
+        <div 
+          className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+          </div>
+          <p className="text-white font-bold text-center mb-1 text-lg">Hapus Produk?</p>
+          <p className="text-gray-300 text-center text-sm mb-6">Tindakan ini tidak dapat dibatalkan.</p>
+          
+          <div className="flex gap-3 w-full">
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }} 
+              className="flex-1 py-3 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+            >
+              Batal
+            </button>
+            <button 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                setShowDeleteConfirm(false); 
+                if (typeof onDelete === 'function') onDelete(product.id); 
+              }} 
+              className="flex-1 py-3 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all"
+            >
+              Hapus
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { supabase, getAuthClient } from '../config/supabaseClient.js';
 export const getProducts = async (req, res) => {
   try {
     const { search, category, minPrice, maxPrice, sort } = req.query;
-    let query = supabase.from('products').select('*');
+    let query = supabase.from('products').select('*, product_ratings(*), profiles(shop_name, full_name)');
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -39,7 +39,7 @@ export const getProductById = async (req, res) => {
     const { id } = req.params;
     const { data, error } = await supabase
       .from('products')
-      .select('*, product_ratings(*)')
+      .select('*, product_ratings(*), profiles(shop_name, full_name)')
       .eq('id', id)
       .single();
 
@@ -60,29 +60,33 @@ export const createProduct = async (req, res) => {
     }
 
     let imageUrl = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400';
+    let imagesArr = [];
 
     const authSupabase = getAuthClient(req);
 
     // Handle Upload to Supabase Storage
-    if (req.file) {
-      const fileExt = req.file.originalname.split('.').pop();
-      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-      const filePath = `${req.user.id}/${fileName}`;
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const fileExt = file.originalname.split('.').pop();
+        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        const filePath = `${req.user.id}/${fileName}`;
 
-      const { error: uploadError } = await authSupabase.storage
-        .from('products')
-        .upload(filePath, req.file.buffer, {
-          contentType: req.file.mimetype,
-          upsert: true
-        });
+        const { error: uploadError } = await authSupabase.storage
+          .from('products')
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true
+          });
 
-      if (uploadError) throw new Error(`Gagal mengupload gambar: ${uploadError.message}`);
+        if (uploadError) throw new Error(`Gagal mengupload gambar: ${uploadError.message}`);
 
-      const { data: { publicUrl } } = authSupabase.storage
-        .from('products')
-        .getPublicUrl(filePath);
-      
-      imageUrl = publicUrl;
+        const { data: { publicUrl } } = authSupabase.storage
+          .from('products')
+          .getPublicUrl(filePath);
+        
+        imagesArr.push(publicUrl);
+      }
+      imageUrl = imagesArr[0];
     }
 
     // Get seller profile
@@ -110,7 +114,8 @@ export const createProduct = async (req, res) => {
         description: description || '',
         category: category || 'Other',
         stock: Number(stock) || 0,
-        image: imageUrl
+        image: imageUrl,
+        images: imagesArr
       }])
       .select();
 
@@ -140,25 +145,30 @@ export const updateProduct = async (req, res) => {
 
     const authSupabase = getAuthClient(req);
 
-    if (req.file) {
-      const fileExt = req.file.originalname.split('.').pop();
-      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-      const filePath = `${req.user.id}/${fileName}`;
+    if (req.files && req.files.length > 0) {
+      let imagesArr = [];
+      for (const file of req.files) {
+        const fileExt = file.originalname.split('.').pop();
+        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        const filePath = `${req.user.id}/${fileName}`;
 
-      const { error: uploadError } = await authSupabase.storage
-        .from('products')
-        .upload(filePath, req.file.buffer, {
-          contentType: req.file.mimetype,
-          upsert: true
-        });
+        const { error: uploadError } = await authSupabase.storage
+          .from('products')
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true
+          });
 
-      if (uploadError) throw new Error(`Gagal mengupload gambar baru: ${uploadError.message}`);
+        if (uploadError) throw new Error(`Gagal mengupload gambar baru: ${uploadError.message}`);
 
-      const { data: { publicUrl } } = authSupabase.storage
-        .from('products')
-        .getPublicUrl(filePath);
-      
-      updateData.image = publicUrl;
+        const { data: { publicUrl } } = authSupabase.storage
+          .from('products')
+          .getPublicUrl(filePath);
+        
+        imagesArr.push(publicUrl);
+      }
+      updateData.image = imagesArr[0];
+      updateData.images = imagesArr;
     }
 
     const { data, error } = await authSupabase
@@ -209,15 +219,16 @@ export const addRating = async (req, res) => {
   try {
     const { id: product_id } = req.params;
     const { score, comment } = req.body;
+    const authSupabase = getAuthClient(req);
 
     // Get profile
-    const { data: profile } = await supabase
+    const { data: profile } = await authSupabase
       .from('profiles')
       .select('full_name')
       .eq('id', req.user.id)
       .single();
 
-    const { error: ratingError } = await supabase
+    const { error: ratingError } = await authSupabase
       .from('product_ratings')
       .insert([{
         product_id,
@@ -229,15 +240,15 @@ export const addRating = async (req, res) => {
 
     if (ratingError) throw ratingError;
 
-    // Re-calculate avg rating (Simplified: normally done via DB triggers or separate query)
-    const { data: ratings } = await supabase
+    // Re-calculate avg rating
+    const { data: ratings } = await authSupabase
       .from('product_ratings')
       .select('score')
       .eq('product_id', product_id);
     
     const avgRating = ratings.reduce((s, r) => s + r.score, 0) / ratings.length;
 
-    await supabase
+    await authSupabase
       .from('products')
       .update({ avg_rating: avgRating })
       .eq('id', product_id);

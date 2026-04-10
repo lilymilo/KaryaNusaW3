@@ -6,23 +6,37 @@ import Navbar from '../components/Navbar';
 import CartDrawer from '../components/CartDrawer';
 import toast from 'react-hot-toast';
 
-const CATEGORIES = ['Electronics', 'Fashion', 'Home', 'Books', 'Sports', 'Kitchen', 'Other'];
+const CATEGORIES = ['E-book', 'Course', 'Software', 'Template', 'Design', 'Audio', 'Other'];
 
 export default function CreateProductPage() {
-  const [form, setForm] = useState({ name: '', price: '', description: '', category: 'NFT', stock: '' });
-  const [image, setImage] = useState(null);
-  const [preview, setPreview] = useState('');
+  const [form, setForm] = useState({ name: '', price: '', description: '', category: 'E-book', stock: '' });
+  const [images, setImages] = useState([]);
+  const [previews, setPreviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const fileRef = useRef();
   const navigate = useNavigate();
 
   const handleImage = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error('Ukuran gambar maksimal 5MB');
-    setImage(file);
-    setPreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    if (images.length + files.length > 5) {
+      return toast.error('Maksimal hanya 5 gambar yang diperbolehkan');
+    }
+
+    const validFiles = files.filter(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`Ukuran gambar ${file.name} melebihi 5MB`);
+        return false;
+      }
+      return true;
+    });
+
+    setImages(prev => [...prev, ...validFiles]);
+    
+    const newPreviews = validFiles.map(file => URL.createObjectURL(file));
+    setPreviews(prev => [...prev, ...newPreviews]);
   };
 
   const handleSubmit = async (e) => {
@@ -32,7 +46,7 @@ export default function CreateProductPage() {
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-      if (image) fd.append('image', image);
+      images.forEach(img => fd.append('images', img));
       await api.post('/products', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       toast.success('Produk berhasil dibuat!');
       navigate('/home');
@@ -67,27 +81,41 @@ export default function CreateProductPage() {
               <ImageIcon size={18} className="text-purple-400" /> Gambar Produk
             </h2>
             <div
-              onClick={() => fileRef.current.click()}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                preview ? 'border-purple-500/50' : 'border-[var(--border-color)] hover:border-purple-500/50'
-              }`}>
-              {preview ? (
-                <img src={preview} alt="preview" className="max-h-48 mx-auto rounded-lg object-cover" />
+              onClick={() => previews.length < 5 && fileRef.current.click()}
+              className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                previews.length > 0 ? 'border-purple-500/50' : 'border-[var(--border-color)] hover:border-purple-500/50'
+              } ${previews.length >= 5 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+              
+              {previews.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {previews.map((prev, idx) => (
+                    <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden bg-[var(--bg-color)]">
+                      <img src={prev} alt={`preview-${idx}`} className="w-full h-full object-cover" />
+                      <button type="button" onClick={(e) => {
+                        e.stopPropagation();
+                        setImages(imgs => imgs.filter((_, i) => i !== idx));
+                        setPreviews(prvs => prvs.filter((_, i) => i !== idx));
+                      }} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                  {previews.length < 5 && (
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-500/30 rounded-lg aspect-square hover:bg-white/5 transition-colors">
+                      <Upload size={24} className="text-gray-400 mb-1" />
+                      <span className="text-xs text-gray-400">Tambah</span>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div>
+                <div className="py-8">
                   <Upload size={40} className="text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-400">Klik untuk upload gambar</p>
-                  <p className="text-gray-600 text-sm mt-1">PNG, JPG, WEBP · Maks 5MB</p>
+                  <p className="text-gray-600 text-sm mt-1">PNG, JPG, WEBP · Maks 5MB · Hingga 5 Foto</p>
                 </div>
               )}
             </div>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} className="hidden" />
-            {preview && (
-              <button type="button" onClick={() => { setImage(null); setPreview(''); }}
-                className="mt-2 text-xs text-red-400 hover:text-red-300">
-                Hapus gambar
-              </button>
-            )}
+            <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleImage} className="hidden" />
           </div>
 
           {/* Product Info */}
@@ -106,14 +134,16 @@ export default function CreateProductPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-[var(--text-secondary)] mb-2">Harga (IDR) *</label>
-                <input type="number" placeholder="0" min="0"
-                  value={form.price} onChange={e => setForm({ ...form, price: e.target.value })}
+                <input type="text" inputMode="numeric" placeholder="0"
+                  value={form.price ? Number(form.price).toLocaleString('id-ID') : ''} 
+                  onChange={e => setForm({ ...form, price: e.target.value.replace(/\D/g, '') })}
                   className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors" />
               </div>
               <div>
                 <label className="block text-sm text-[var(--text-secondary)] mb-2">Stok</label>
-                <input type="number" placeholder="99" min="1"
-                  value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })}
+                <input type="text" inputMode="numeric" placeholder="0"
+                  value={form.stock ? Number(form.stock).toLocaleString('id-ID') : ''} 
+                  onChange={e => setForm({ ...form, stock: e.target.value.replace(/\D/g, '') })}
                   className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors" />
               </div>
             </div>

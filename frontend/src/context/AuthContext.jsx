@@ -69,10 +69,16 @@ export const AuthProvider = ({ children }) => {
         } catch (err) {
           console.error("Failed to sync profile:", err);
         }
+        // Clean up OAuth hash fragment from URL
+        if (window.location.hash.includes('access_token=')) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        setLoading(false);
       } else if (event === 'SIGNED_OUT') {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
+        setLoading(false);
       }
     });
 

@@ -8,15 +8,15 @@ import ThemeToggle from '../components/ThemeToggle';
 
 const features = [
   { Icon: Shield, title: 'Transaksi Aman', desc: 'Setiap transaksi dilindungi enkripsi tingkat tinggi dan sistem verifikasi berlapis untuk keamanan penuh.' },
-  { Icon: Truck, title: 'Pengiriman Cepat', desc: 'Bekerja sama dengan berbagai jasa pengiriman terpercaya agar produk sampai tepat waktu ke tangan Anda.' },
+  { Icon: Zap, title: 'Akses Instan', desc: 'Dapatkan produk digital Anda secara instan segera setelah pembayaran berhasil dikonfirmasi.' },
   { Icon: HeadphonesIcon, title: 'Dukungan 24/7', desc: 'Tim customer service kami siap membantu kapan saja melalui chat, email, maupun telepon.' },
-  { Icon: Tag, title: 'Harga Terbaik', desc: 'Temukan produk berkualitas dengan harga kompetitif langsung dari penjual-penjual terpercaya.' },
+  { Icon: Tag, title: 'Harga Terbaik', desc: 'Temukan produk berkualitas dengan harga kompetitif langsung dari kreator terpercaya.' },
 ];
 
 const highlights = [
   { Icon: Lock, title: 'Akun Terverifikasi', desc: 'Setiap penjual melalui proses verifikasi identitas sebelum bisa berjualan di platform kami.' },
-  { Icon: ShoppingBag, title: 'Produk Beragam', desc: 'Dari elektronik, fashion, peralatan rumah, hingga buku — semua tersedia dalam satu tempat.' },
-  { Icon: Globe, title: 'Jangkauan Luas', desc: 'Platform dapat diakses dari seluruh Indonesia dengan tampilan responsif di semua perangkat.' },
+  { Icon: ShoppingBag, title: 'Produk Beragam', desc: 'Dari E-book, Kursus Online, Template Desain, hingga Software — semua tersedia dalam satu tempat.' },
+  { Icon: Globe, title: 'Jangkauan Luas', desc: 'Akses koleksi digital Anda dari mana saja dengan tampilan responsif di semua perangkat.' },
   { Icon: Zap, title: 'Checkout Mudah', desc: 'Proses pembelian simpel dan cepat, dari pilih produk hingga konfirmasi pesanan hanya dalam hitungan detik.' },
 ];
 
@@ -29,7 +29,7 @@ const web3Benefits = [
   { Icon: Shield, title: 'Kriptografi Mutakhir', desc: 'Melindungi privasi dan keamanan akun Anda dengan enkripsi kunci publik-privat, memberikan proteksi maksimal terhadap serangan siber tradisional.' },
 ];
 
-const categories = ['Electronics', 'Fashion', 'Home', 'Books', 'Sports', 'Kitchen'];
+const categories = ['E-book', 'Course', 'Software', 'Template', 'Design', 'Audio'];
 
 export default function LandingPage() {
   return (
@@ -64,13 +64,13 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full text-sm text-purple-300 mb-6">
-                <ShoppingBag size={14} /> Marketplace Online Terpercaya
+                <Zap size={14} /> Marketplace Produk Digital Terpercaya
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-5 leading-tight">
-                Belanja <span className="gradient-text">Lebih Mudah</span> dan Aman
+                Akses <span className="gradient-text">Aset Digital</span> Tanpa Batas
               </h1>
               <p className="text-lg text-[var(--text-secondary)] mb-8 max-w-lg">
-                Temukan ribuan produk pilihan dari penjual terpercaya. Belanja nyaman, aman, dan langsung dari rumah Anda kapan saja dan di mana saja.
+                Temukan ribuan karya dan materi edukasi pilihan dari kreator terpercaya. Beli, unduh, dan nikmati langsung dari perangkat Anda kapan saja.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link to="/register" className="btn-primary px-8 py-4 rounded-xl text-white font-semibold flex items-center justify-center gap-2 text-lg">
@@ -132,9 +132,9 @@ export default function LandingPage() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
               <div className="absolute bottom-6 left-6 z-10">
-                <span className="text-xs text-purple-200 uppercase tracking-widest font-bold">Untuk Keluarga</span>
-                <p className="text-white font-bold text-2xl mt-1">Belanja Bersama</p>
-                <p className="text-white opacity-80 text-sm mt-1">Produk lengkap untuk semua anggota keluarga</p>
+                <span className="text-xs text-purple-200 uppercase tracking-widest font-bold">Investasi Ilmu</span>
+                <p className="text-white font-bold text-2xl mt-1">Tingkatkan Skill</p>
+                <p className="text-white opacity-80 text-sm mt-1">Ratusan modul pembelajaran dari para ahli</p>
               </div>
             </Link>
             {/* 2 gambar kecil */}
@@ -147,8 +147,8 @@ export default function LandingPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
                 <div className="absolute bottom-4 left-4 z-10">
-                  <span className="text-xs text-cyan-300 uppercase tracking-widest">Koleksi Lengkap</span>
-                  <p className="text-white font-bold text-lg mt-0.5">Ribuan Pilihan</p>
+                  <span className="text-xs text-cyan-300 uppercase tracking-widest">Aset Digital</span>
+                  <p className="text-white font-bold text-lg mt-0.5">Karya Kreatif</p>
                 </div>
               </Link>
               <Link to="/register" className="group relative rounded-3xl overflow-hidden flex-1 shadow-xl flex items-center justify-center bg-black/5 dark:bg-white/5">
@@ -222,15 +222,15 @@ export default function LandingPage() {
             <img src={keluargaBelanja} alt="Keluarga Belanja" className="w-full h-auto object-contain rounded-2xl" />
           </div>
           <div>
-            <p className="text-purple-400 text-sm font-medium uppercase tracking-widest mb-3">Untuk Semua</p>
+            <p className="text-purple-400 text-sm font-medium uppercase tracking-widest mb-3">Produktivitas & Edukasi</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mb-4">
-              Belanja Bersama <span className="gradient-text">Keluarga</span>
+              Tingkatkan <span className="gradient-text">Skill Anda</span>
             </h2>
             <p className="text-[var(--text-secondary)] leading-relaxed mb-6">
-              KaryaNusa hadir untuk memenuhi kebutuhan seluruh anggota keluarga. Dari produk anak-anak, kebutuhan dapur, hingga elektronik rumah tangga — semua tersedia dengan harga terjangkau dan kualitas terjamin.
+              KaryaNusa hadir untuk memenuhi kebutuhan pembelajaran dan produktivitas Anda. Dari kursus pemrograman, template desain profesional, hingga E-book panduan bisnis — semua tersedia dari kreator terbaik.
             </p>
             <div className="flex flex-col gap-3 mb-8">
-              {['Produk aman dan terverifikasi', 'Pengiriman ke seluruh Indonesia', 'Garansi kepuasan pelanggan'].map(item => (
+              {['Materi berkualitas dari ahlinya', 'Akses instan setelah pembayaran', 'Tingkatkan produktivitas tanpa batas'].map(item => (
                 <div key={item} className="flex items-center gap-3 text-[var(--text-secondary)] text-sm">
                   <div className="w-5 h-5 rounded-full btn-primary flex items-center justify-center shrink-0">
                     <span className="text-white text-[xs]">✓</span>
@@ -250,12 +250,12 @@ export default function LandingPage() {
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
           <div className="order-2 lg:order-1">
-            <p className="text-cyan-400 text-sm font-medium uppercase tracking-widest mb-3">Koleksi Terlengkap</p>
+            <p className="text-cyan-400 text-sm font-medium uppercase tracking-widest mb-3">Koleksi Digital</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mb-4">
-              Ribuan Pilihan <span className="gradient-text">Produk</span>
+              Ribuan Pilihan <span className="gradient-text">Aset Digital</span>
             </h2>
             <p className="text-[var(--text-secondary)] leading-relaxed mb-6">
-              Temukan koleksi produk terlengkap dari berbagai kategori. Penjual terpercaya kami menghadirkan produk berkualitas dengan harga yang bersaing dan ulasan jujur dari pembeli nyata.
+              Temukan koleksi aset digital terlengkap dari berbagai kategori. Kreator terpercaya kami menghadirkan produk berkualitas dengan harga yang bersaing, lengkap dengan ulasan jujur dari pembeli nyata yang telah sukses menggunakannya.
             </p>
             <Link to="/register" className="btn-primary px-7 py-3 rounded-xl text-white font-semibold inline-flex items-center gap-2">
               Jelajahi Koleksi <ArrowRight size={18} />

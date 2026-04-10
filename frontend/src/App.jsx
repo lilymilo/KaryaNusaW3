@@ -14,7 +14,11 @@ import ProfilePage from './pages/ProfilePage';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return (
+  
+  // Detect OAuth callback — hash contains access_token from Supabase Google login
+  const hasAuthHash = window.location.hash.includes('access_token=');
+  
+  if (loading || hasAuthHash) return (
     <div className="min-h-screen bg-[var(--bg-color)] flex items-center justify-center transition-colors">
       <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
     </div>

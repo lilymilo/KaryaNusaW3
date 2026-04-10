@@ -8,7 +8,7 @@ import ProductModal from '../components/ProductModal';
 import CartDrawer from '../components/CartDrawer';
 import toast from 'react-hot-toast';
 
-const CATEGORIES = ['all', 'Electronics', 'Fashion', 'Home', 'Books', 'Sports', 'Kitchen', 'Other'];
+const CATEGORIES = ['all', 'E-book', 'Course', 'Software', 'Template', 'Design', 'Audio', 'Other'];
 
 export default function HomePage() {
   const { user } = useAuth();

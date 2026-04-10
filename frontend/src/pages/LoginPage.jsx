@@ -133,7 +133,7 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={() => loginWithGoogle()}
+            onClick={() => loginWithGoogle(role)}
             className="w-full flex items-center justify-center gap-4 bg-white hover:bg-slate-50 py-4 px-6 rounded-2xl text-gray-900 font-black transition-all shadow-lg active:scale-[0.98] group"
           >
             <svg className="w-6 h-6 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
