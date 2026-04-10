@@ -1,9 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Shield, Zap, Globe, ArrowRight, Lock, Truck, HeadphonesIcon, Tag, Star, Users, BadgeCheck, TrendingUp } from 'lucide-react';
 import logo from '../assets/logo.png';
-import keluargaBelanja from '../assets/keluarga_belanja.jpg';
-import koleksiLengkap from '../assets/koleksi_lengkap.jpg';
-import web3Showcase from '../assets/web3promosi.jpg';
 import ThemeToggle from '../components/ThemeToggle';
 
 const features = [
@@ -114,55 +111,42 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Showcase — 3 poster: Keluarga (besar), Koleksi & Web3 (kecil) */}
+      {/* Branding Hub — Replacing Showcase images with Typography & Logo */}
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">Temukan <span className="gradient-text">Produk Terbaik</span></h2>
-            <p className="text-[var(--text-secondary)] max-w-lg mx-auto">Dari kebutuhan sehari-hari hingga produk pilihan, semua ada di KaryaNusa.</p>
-          </div>
-          {/* Layout: 1 besar kiri + 2 kecil kanan */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[480px]">
-            {/* Gambar besar — Keluarga */}
-            <Link to="/register" className="group relative rounded-3xl overflow-hidden lg:col-span-2 shadow-xl flex items-center justify-center bg-black/5 dark:bg-white/5">
-              <img
-                src={keluargaBelanja}
-                alt="Belanja untuk Keluarga"
-                className="w-full h-64 lg:h-full object-contain group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-              <div className="absolute bottom-6 left-6 z-10">
-                <span className="text-xs text-purple-200 uppercase tracking-widest font-bold">Investasi Ilmu</span>
-                <p className="text-white font-bold text-2xl mt-1">Tingkatkan Skill</p>
-                <p className="text-white opacity-80 text-sm mt-1">Ratusan modul pembelajaran dari para ahli</p>
+          <div className="glass rounded-[3rem] p-8 lg:p-16 border border-white/10 shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-cyan-600/5 transition-opacity group-hover:opacity-100 opacity-50" />
+            
+            <div className="relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+              <div className="order-2 lg:order-1">
+                <h2 className="text-3xl sm:text-5xl font-black mb-6 leading-tight">
+                  Pusat <span className="gradient-text">Ekonomi Digital</span> Nusantara
+                </h2>
+                <div className="space-y-6">
+                  <p className="text-lg text-[var(--text-secondary)] leading-relaxed">
+                    KaryaNusa hadir untuk mendemokrasikan akses terhadap aset digital berkualitas. Kami percaya bahwa setiap kreator di seluruh pelosok Nusantara berhak mendapatkan panggung yang setara untuk memasarkan karya intelektual mereka.
+                  </p>
+                  <p className="text-lg text-[var(--text-secondary)] leading-relaxed">
+                    Melalui kurasi yang ketat dan sistem yang transparan, kami memastikan setiap E-book, Kursus, hingga Template yang Anda dapatkan adalah investasi terbaik untuk pertumbuhan skill dan produktivitas Anda.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-4 mt-10">
+                  <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold uppercase tracking-widest text-purple-400">
+                    Aman & Terpercaya
+                  </div>
+                  <div className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold uppercase tracking-widest text-cyan-400">
+                    Akses Instan
+                  </div>
+                </div>
               </div>
-            </Link>
-            {/* 2 gambar kecil */}
-            <div className="flex flex-col gap-4 h-full">
-              <Link to="/register" className="group relative rounded-3xl overflow-hidden flex-1 shadow-xl flex items-center justify-center bg-black/5 dark:bg-white/5">
-                <img
-                  src={koleksiLengkap}
-                  alt="Koleksi Lengkap"
-                  className="w-full h-48 lg:h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-                <div className="absolute bottom-4 left-4 z-10">
-                  <span className="text-xs text-cyan-300 uppercase tracking-widest">Aset Digital</span>
-                  <p className="text-white font-bold text-lg mt-0.5">Karya Kreatif</p>
+              
+              <div className="order-1 lg:order-2 flex flex-col items-center justify-center p-8 bg-white/5 rounded-[2.5rem] border border-white/10 backdrop-blur-sm">
+                <img src={logo} alt="KaryaNusa Branding" className="w-48 h-48 lg:w-64 lg:h-64 object-contain drop-shadow-[0_0_30px_rgba(139,92,246,0.3)] animate-pulse-slow" />
+                <div className="mt-8 text-center">
+                  <h3 className="text-2xl font-bold gradient-text">KARYANUSA</h3>
+                  <p className="text-[var(--text-secondary)] text-sm mt-2 font-medium">Digitalizing The Nation's Creativity</p>
                 </div>
-              </Link>
-              <Link to="/register" className="group relative rounded-3xl overflow-hidden flex-1 shadow-xl flex items-center justify-center bg-black/5 dark:bg-white/5">
-                <img
-                  src={web3Showcase}
-                  alt="KaryaNusa Promosi"
-                  className="w-full h-48 lg:h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-                <div className="absolute bottom-4 left-4 z-10">
-                  <span className="text-xs text-purple-200 uppercase tracking-widest font-bold">Promo Spesial</span>
-                  <p className="text-white font-bold text-lg mt-0.5">Penawaran Terbaik</p>
-                </div>
-              </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -215,11 +199,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Belanja Bersama Keluarga */}
+      {/* Digital Productivity Hub — Replacing "Tingkatkan Skill" image */}
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
-          <div className="rounded-3xl overflow-hidden shadow-xl shadow-purple-900/20 bg-black/5 dark:bg-white/5 flex items-center justify-center p-2">
-            <img src={keluargaBelanja} alt="Keluarga Belanja" className="w-full h-auto object-contain rounded-2xl" />
+          <div className="glass rounded-[2.5rem] p-10 border border-white/10 flex flex-col items-center justify-center text-center">
+            <div className="w-24 h-24 bg-gradient-to-br from-purple-600 to-cyan-600 rounded-3xl flex items-center justify-center mb-8 shadow-lg shadow-purple-500/20">
+              <BadgeCheck size={48} className="text-white" />
+            </div>
+            <h3 className="text-3xl font-bold text-[var(--text-primary)] mb-4">Investasi Intelektual</h3>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              Dunia berubah dengan cepat. Di KaryaNusa, kami menyediakan "senjata" digital untuk Anda tetap relevan. Setiap aset yang Anda beli adalah kunci untuk membuka pintu peluang baru.
+            </p>
           </div>
           <div>
             <p className="text-purple-400 text-sm font-medium uppercase tracking-widest mb-3">Produktivitas & Edukasi</p>
@@ -227,13 +217,13 @@ export default function LandingPage() {
               Tingkatkan <span className="gradient-text">Skill Anda</span>
             </h2>
             <p className="text-[var(--text-secondary)] leading-relaxed mb-6">
-              KaryaNusa hadir untuk memenuhi kebutuhan pembelajaran dan produktivitas Anda. Dari kursus pemrograman, template desain profesional, hingga E-book panduan bisnis — semua tersedia dari kreator terbaik.
+              Platform kami dirancang untuk mendukung perjalanan belajar Anda. Dari kursus pemrograman, template desain profesional, hingga E-book panduan bisnis — semua tersedia dari kreator terbaik di bidangnya.
             </p>
             <div className="flex flex-col gap-3 mb-8">
-              {['Materi berkualitas dari ahlinya', 'Akses instan setelah pembayaran', 'Tingkatkan produktivitas tanpa batas'].map(item => (
+              {['Akses materi selamanya', 'Kualitas konten terkurasi', 'Dukungan komunitas kreator'].map(item => (
                 <div key={item} className="flex items-center gap-3 text-[var(--text-secondary)] text-sm">
                   <div className="w-5 h-5 rounded-full btn-primary flex items-center justify-center shrink-0">
-                    <span className="text-white text-[xs]">✓</span>
+                    <span className="text-white text-[10px]">✓</span>
                   </div>
                   {item}
                 </div>
@@ -246,23 +236,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Koleksi Lengkap */}
+      {/* Wide Library Section — Replacing "Koleksi Lengkap" image */}
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
           <div className="order-2 lg:order-1">
             <p className="text-cyan-400 text-sm font-medium uppercase tracking-widest mb-3">Koleksi Digital</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mb-4">
-              Ribuan Pilihan <span className="gradient-text">Aset Digital</span>
+              Ribuan Pilihan <span className="gradient-text">Aset Kreatif</span>
             </h2>
             <p className="text-[var(--text-secondary)] leading-relaxed mb-6">
-              Temukan koleksi aset digital terlengkap dari berbagai kategori. Kreator terpercaya kami menghadirkan produk berkualitas dengan harga yang bersaing, lengkap dengan ulasan jujur dari pembeli nyata yang telah sukses menggunakannya.
+              Telusuri koleksi aset digital terlengkap yang dikurasi khusus untuk kebutuhan profesional Anda. Karya kreator lokal kami menawarkan kualitas global dengan sentuhan kearifan lokal yang unik dan siap digunakan segera.
             </p>
             <Link to="/register" className="btn-primary px-7 py-3 rounded-xl text-white font-semibold inline-flex items-center gap-2">
               Jelajahi Koleksi <ArrowRight size={18} />
             </Link>
           </div>
-          <div className="rounded-3xl overflow-hidden shadow-xl shadow-cyan-900/20 order-1 lg:order-2 bg-black/5 dark:bg-white/5 flex items-center justify-center p-2">
-            <img src={koleksiLengkap} alt="Koleksi Lengkap" className="w-full h-auto object-contain rounded-2xl" />
+          <div className="order-1 lg:order-2 glass rounded-[2.5rem] p-10 border border-white/10 flex flex-col items-center justify-center text-center">
+            <div className="w-24 h-24 bg-gradient-to-br from-cyan-600 to-purple-600 rounded-full flex items-center justify-center mb-8 shadow-lg shadow-cyan-500/20">
+              <ShoppingBag size={48} className="text-white" />
+            </div>
+            <h3 className="text-3xl font-bold text-[var(--text-primary)] mb-4">Katalog Teraktif</h3>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              Setiap hari, ratusan aset baru ditambahkan ke galeri kami. Mulai dari UI Kit hingga kode sumber aplikasi, semua tersedia dalam satu ekosistem yang kohesif.
+            </p>
           </div>
         </div>
       </section>
