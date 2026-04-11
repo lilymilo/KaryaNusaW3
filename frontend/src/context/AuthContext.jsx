@@ -11,30 +11,37 @@ export const AuthProvider = ({ children }) => {
   // Sync Supabase Auth state with our Context
   useEffect(() => {
     const syncAuth = async () => {
-      // Check if we are in an auth redirect flow (contains access_token in hash)
-      const hasHash = window.location.hash.includes('access_token=');
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        localStorage.setItem('token', session.access_token);
-        try {
-          const { data } = await api.get('/auth/me', {
-            headers: { Authorization: `Bearer ${session.access_token}` }
-          });
-          setUser(data.user);
-          localStorage.setItem('user', JSON.stringify(data.user));
-        } catch (err) {
-          console.error("Failed to sync profile:", err);
+      try {
+        // Check if we are in an auth redirect flow (contains access_token in hash)
+        const hasHash = window.location.hash.includes('access_token=');
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          localStorage.setItem('token', session.access_token);
+          try {
+            const { data } = await api.get('/auth/me', {
+              headers: { Authorization: `Bearer ${session.access_token}` }
+            });
+            setUser(data.user);
+            localStorage.setItem('user', JSON.stringify(data.user));
+          } catch (err) {
+            console.error("Failed to sync profile:", err);
+            // Help teammates debug "bouncing" issues
+            if (err.response?.status === 401) {
+              toast.error("Gagal sinkronisasi profil. Pastikan kredensial Supabase di backend & frontend sama.");
+            }
+          }
+        } else if (hasHash) {
+          // We have a hash but no session yet, Supabase is likely processing it.
+          console.log("Auth hash detected, waiting for session...");
+          // After 5 seconds, if still no session, stop loading
+          setTimeout(() => setLoading(false), 5000);
+          return; // Don't call setLoading(false) yet
         }
-        setLoading(false);
-      } else if (hasHash) {
-        // We have a hash but no session yet, Supabase is likely processing it.
-        // We stay in loading state and let onAuthStateChange handle the rest.
-        console.log("Auth hash detected, waiting for session...");
-        // After 5 seconds, if still no session, stop loading
-        setTimeout(() => setLoading(false), 5000);
-      } else {
+      } catch (err) {
+        console.error("Initial auth check failed:", err);
+      } finally {
         setLoading(false);
       }
     };
