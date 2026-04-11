@@ -37,7 +37,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
             <img src={logo} alt="KaryaNusa Logo" className="w-9 h-9 rounded-lg object-contain" />
-            <span className="text-xl font-bold gradient-text">KaryaNusa</span>
+            <span className="text-xl font-bold gradient-text hidden sm:block">KaryaNusa</span>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
@@ -53,9 +53,9 @@ export default function LandingPage() {
 
       {/* Hero — teks kiri, LOGO kanan */}
       <section className="pt-24 sm:pt-32 pb-12 sm:pb-16 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/4 w-72 h-72 sm:w-96 sm:h-96 bg-purple-600/10 dark:bg-purple-600/20 rounded-full blur-3xl transition-colors" />
-          <div className="absolute bottom-1/4 right-1/4 w-72 h-72 sm:w-96 sm:h-96 bg-cyan-600/10 dark:bg-cyan-600/20 rounded-full blur-3xl transition-colors" />
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/3 left-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-purple-600/10 dark:bg-purple-600/20 rounded-full blur-2xl sm:blur-3xl transition-colors" />
+          <div className="absolute bottom-1/4 right-1/4 w-48 h-48 sm:w-96 sm:h-96 bg-cyan-600/10 dark:bg-cyan-600/20 rounded-full blur-2xl sm:blur-3xl transition-colors" />
         </div>
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="grid lg:grid-cols-2 gap-10 items-center">

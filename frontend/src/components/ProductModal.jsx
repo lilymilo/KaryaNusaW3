@@ -127,7 +127,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-hidden" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm sm:backdrop-blur-md overflow-hidden" onClick={onClose}>
       <div 
         className="bg-[var(--bg-color)] rounded-[2.5rem] max-w-6xl w-full max-h-[92vh] overflow-y-auto border border-[var(--border-color)] shadow-2xl relative" 
         onClick={e => e.stopPropagation()}

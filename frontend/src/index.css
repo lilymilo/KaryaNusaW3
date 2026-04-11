@@ -41,7 +41,20 @@
   .glass {
     background: var(--glass-bg);
     backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
+  }
+
+  /* Mobile: reduce blur for performance */
+  @media (max-width: 768px) {
+    .glass {
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      background: rgba(255, 255, 255, 0.08); /* slightly more opaque to compensate for less blur in dark mode */
+    }
+    :root.light .glass {
+      background: rgba(255, 255, 255, 0.85); /* slightly more opaque in light mode */
+    }
   }
   .glow {
     box-shadow: 0 0 20px var(--accent-glow);
@@ -66,13 +79,21 @@
     box-shadow: 0 8px 25px rgba(139,92,246,0.4);
   }
   .card-hover {
-    transition: all 0.3s;
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1), background 0.3s, box-shadow 0.3s;
     background: var(--card-bg);
+    will-change: transform;
   }
   .card-hover:hover {
     transform: translateY(-4px);
     background: var(--card-hover-bg);
-    box-shadow: 0 20px 40px var(--shadow-color);
+    box-shadow: 0 15px 30px var(--shadow-color);
+  }
+
+  /* mobile: simpler hover effects */
+  @media (max-width: 640px) {
+    .card-hover:hover {
+      transform: translateY(-2px);
+    }
   }
 
   /* Mobile Optimizations */
@@ -105,5 +126,7 @@
 
 .animate-pulse-slow {
   animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  transform: translateZ(0); /* Force GPU acceleration */
+  will-change: opacity, transform;
 }
 
