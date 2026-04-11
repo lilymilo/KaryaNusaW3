@@ -72,8 +72,8 @@ export const register = async (req, res) => {
 
     res.status(201).json({ 
       message: needsConfirmation 
-        ? "Registrasi berhasil! Silakan cek email Anda untuk verifikasi akun." 
-        : "Registrasi Berhasil!", 
+        ? "Registrasi sedang diproses! Silakan verifikasi email Anda (periksa juga folder Spam) untuk mengaktifkan akun." 
+        : "Registrasi Berhasil! Akun Anda siap digunakan.", 
       user: {
         ...authData.user,
         ...fullProfile
@@ -106,7 +106,8 @@ export const login = async (req, res) => {
     .single();
 
   if (profileError && profileError.code !== 'PGRST116') {
-    return res.status(400).json({ error: profileError.message });
+    console.error("Login Profile Fetch Error:", profileError.message);
+    return res.status(400).json({ error: "Gagal mengambil data profil. Silakan coba lagi." });
   }
 
   // Jika user memilih role tertentu saat login, kita bisa memvalidasi di sini

@@ -26,10 +26,13 @@ export const getProducts = async (req, res) => {
     else query = query.order('created_at', { ascending: false });
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error("Fetch Products Error:", error.message);
+      throw error;
+    }
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Gagal mengambil daftar produk. Silakan coba lagi nanti." });
   }
 };
 
@@ -43,10 +46,13 @@ export const getProductById = async (req, res) => {
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+       console.error("Fetch Product Detail Error:", error.message);
+       throw error;
+    }
     res.json(data);
   } catch (error) {
-    res.status(404).json({ error: "Produk tidak ditemukan" });
+    res.status(404).json({ error: "Produk tidak ditemukan atau link sudah kedaluwarsa." });
   }
 };
 

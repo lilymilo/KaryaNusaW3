@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/axios';
 import { supabase } from '../api/supabaseClient';
+import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 
@@ -27,9 +28,13 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('user', JSON.stringify(data.user));
           } catch (err) {
             console.error("Failed to sync profile:", err);
-            // Help teammates debug "bouncing" issues
+            // Help teammates debug "bouncing" issues or server down issues
             if (err.response?.status === 401) {
-              toast.error("Gagal sinkronisasi profil. Pastikan kredensial Supabase di backend & frontend sama.");
+              toast.error("Sesi tidak valid. Kredensial server & client mungkin berbeda.");
+            } else if (!err.response) {
+              toast.error("Server backend tidak terdeteksi. Pastikan backend sudah dijalankan.");
+            } else {
+              toast.error("Gagal menyinkronkan profil user.");
             }
           }
         } else if (hasHash) {
