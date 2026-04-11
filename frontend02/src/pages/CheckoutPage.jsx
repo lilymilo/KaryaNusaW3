@@ -73,11 +73,11 @@ export default function CheckoutPage() {
 
   if (checkoutItems.length === 0) {
     return (
-      <div className="min-h-screen bg-[var(--bg-color)] transition-colors duration-300 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 flex items-center justify-center">
         <div className="text-center">
-          <ShoppingBag size={48} className="text-[var(--text-secondary)] opacity-20 mx-auto mb-4" />
-          <p className="text-[var(--text-secondary)] mb-4">Keranjang kosong</p>
-          <button onClick={() => navigate('/home')} className="btn-primary px-6 py-2 rounded-xl text-white">
+          <ShoppingBag size={48} className="text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 mb-4 font-medium">Keranjang kosong</p>
+          <button onClick={() => navigate('/home')} className="btn-primary px-6 py-2 rounded-xl text-white font-bold shadow-sm">
             Kembali Belanja
           </button>
         </div>
@@ -86,72 +86,72 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-color)] transition-colors duration-300 pt-8 pb-12 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 pt-8 pb-32 px-4">
       <div className="max-w-4xl mx-auto">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-6 transition-colors">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white mb-6 transition-colors font-medium">
           <ArrowLeft size={20} /> Kembali
         </button>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-8">Checkout</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Checkout</h1>
 
         <div className="grid lg:grid-cols-5 gap-8">
           {/* Form */}
           <div className="lg:col-span-3 space-y-6">
             {/* Shipping */}
-            <div className="glass rounded-2xl p-6 border border-[var(--border-color)]">
-              <h2 className="font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                <ShoppingBag size={18} className="text-purple-400" /> Informasi Pengiriman Digital
+            <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-colors">
+              <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <ShoppingBag size={18} className="text-green-600 dark:text-emerald-400" /> Informasi Pengiriman Digital
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-[var(--text-secondary)] mb-2">Email Pengiriman (Untuk akses link/file)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Pengiriman (Untuk akses link/file)</label>
                   <input type="email" placeholder="contoh@email.com"
                     value={form.delivery_email} onChange={e => setForm({ ...form, delivery_email: e.target.value })}
-                    className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] opacity-70 focus:opacity-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all" />
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all shadow-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm text-[var(--text-secondary)] mb-2">
-                    <Phone size={14} className="inline mr-1" /> Nomor Telepon / WA
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <Phone size={14} className="inline mr-1 text-gray-400" /> Nomor Telepon / WA
                   </label>
                   <input type="tel" placeholder="08xxxxxxxxxx"
                     value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                    className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] opacity-70 focus:opacity-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all" />
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all shadow-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm text-[var(--text-secondary)] mb-2">Catatan Pesanan (Opsional)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Catatan Pesanan (Opsional)</label>
                   <textarea rows={2} placeholder="Instruksi tambahan..."
                     value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                    className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-[var(--text-primary)] placeholder-[var(--text-secondary)] opacity-70 focus:opacity-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none transition-all" />
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 resize-none transition-all shadow-sm" />
                 </div>
               </div>
             </div>
 
             {/* Payment */}
-            <div className="glass rounded-2xl p-6 border border-[var(--border-color)]">
-              <h2 className="font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
-                <CreditCard size={18} className="text-purple-400" /> Metode Pembayaran
+            <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-colors">
+              <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <CreditCard size={18} className="text-green-600 dark:text-emerald-400" /> Metode Pembayaran
               </h2>
               <div className="space-y-3">
                 {PAYMENT_METHODS.map(({ id, label, icon: Icon, desc }) => (
                   <label key={id} className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
                     form.paymentMethod === id
-                      ? 'border-purple-500 bg-purple-500/10'
-                      : 'border-[var(--border-color)] bg-[var(--card-bg)] hover:border-purple-500/30'
+                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm'
                   }`}>
                     <input type="radio" name="payment" value={id}
                       checked={form.paymentMethod === id}
                       onChange={e => setForm({ ...form, paymentMethod: e.target.value })}
                       className="hidden" />
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                      form.paymentMethod === id ? 'btn-primary' : 'bg-[var(--card-hover-bg)] text-[var(--text-secondary)]'
+                      form.paymentMethod === id ? 'btn-primary shadow-sm' : 'bg-gray-100 text-gray-500'
                     }`}>
                       <Icon size={20} className={form.paymentMethod === id ? "text-white" : "text-current"} />
                     </div>
                     <div>
-                      <p className="font-medium text-[var(--text-primary)]">{label}</p>
-                      <p className="text-xs text-[var(--text-secondary)] opacity-60">{desc}</p>
+                      <p className="font-bold text-sm text-gray-900 dark:text-white">{label}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
                     </div>
                     {form.paymentMethod === id && (
-                      <div className="ml-auto w-5 h-5 btn-primary rounded-full flex items-center justify-center">
+                      <div className="ml-auto w-5 h-5 btn-primary shadow-sm rounded-full flex items-center justify-center">
                         <div className="w-2 h-2 bg-white rounded-full" />
                       </div>
                     )}
@@ -163,32 +163,32 @@ export default function CheckoutPage() {
 
           {/* Order Summary */}
           <div className="lg:col-span-2">
-            <div className="glass rounded-2xl p-6 sticky top-24 border border-[var(--border-color)]">
-              <h2 className="font-semibold text-[var(--text-primary)] mb-4">Ringkasan Pesanan</h2>
-              <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+            <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-6 sticky top-24 border border-gray-200 dark:border-gray-700 transition-colors">
+              <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Ringkasan Pesanan</h2>
+              <div className="space-y-3 mb-4 max-h-64 overflow-y-auto pr-2">
                 {checkoutItems.map(item => (
                   <div key={item.id || item.product_id} className="flex gap-3">
                     <img src={item.products?.image} alt={item.products?.name}
-                      className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                      className="w-12 h-12 object-cover rounded-lg flex-shrink-0 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
                       onError={e => { e.target.src = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400'; }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[var(--text-primary)] line-clamp-1">{item.products?.name}</p>
-                      <p className="text-xs text-[var(--text-secondary)] opacity-60">x{item.quantity}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">{item.products?.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">x{item.quantity}</p>
                     </div>
-                    <p className="text-sm text-purple-400 font-medium whitespace-nowrap">
+                    <p className="text-sm text-gray-900 dark:text-white font-bold whitespace-nowrap">
                       {formatPrice((item.products?.price || 0) * item.quantity)}
                     </p>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-[var(--border-color)] pt-4 mb-6">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-[var(--text-secondary)]">Total Pembayaran</span>
-                  <span className="text-xl font-bold gradient-text">{formatPrice(checkoutTotal)}</span>
+                  <span className="text-gray-500 dark:text-gray-400 font-medium">Total Pembayaran</span>
+                  <span className="text-xl font-black text-green-600 dark:text-emerald-400">{formatPrice(checkoutTotal)}</span>
                 </div>
               </div>
               <button onClick={handleSubmit} disabled={loading}
-                className="w-full btn-primary py-3 rounded-xl text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed">
+                className="w-full btn-primary py-3 rounded-xl text-white font-bold shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transition-transform active:scale-[0.98]">
                 {loading ? 'Memproses...' : 'Bayar Sekarang'}
               </button>
             </div>

@@ -127,14 +127,14 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm sm:backdrop-blur-md overflow-hidden" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm sm:backdrop-blur-md overflow-hidden transition-all" onClick={onClose}>
       <div 
-        className="bg-[var(--bg-color)] rounded-[2.5rem] max-w-6xl w-full max-h-[92vh] overflow-y-auto border border-[var(--border-color)] shadow-2xl relative" 
+        className="bg-white dark:bg-gray-900 rounded-[2.5rem] max-w-6xl w-full max-h-[92vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl relative transition-colors" 
         onClick={e => e.stopPropagation()}
       >
         {/* Close Button */}
         <button onClick={onClose}
-          className="absolute top-6 right-6 z-10 p-2.5 bg-[var(--card-bg)] hover:bg-red-500/20 hover:text-red-500 rounded-full text-[var(--text-secondary)] transition-all border border-[var(--border-color)]">
+          className="absolute top-6 right-6 z-10 p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/40 hover:text-red-500 rounded-full text-gray-500 dark:text-gray-400 transition-all border border-gray-200 dark:border-gray-700 shadow-sm">
           <X size={20} />
         </button>
 
@@ -143,11 +143,11 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
           {/* Kolom Kiri: Galeri Foto (4/12) */}
           <div className="lg:col-span-4 space-y-4">
             <div 
-              className="aspect-square rounded-2xl sm:rounded-3xl overflow-hidden glass border border-[var(--border-color)] shadow-sm relative group cursor-zoom-in"
+              className="aspect-square rounded-2xl sm:rounded-3xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm relative group cursor-zoom-in"
               onClick={() => setLightboxOpen(true)}
             >
               <img src={currentImage} alt={product.name}
-                className="w-full h-full object-contain bg-black/5 dark:bg-white/5 transition-transform duration-700 group-hover:scale-105"
+                className="w-full h-full object-contain bg-gray-50 dark:bg-gray-800 transition-transform duration-700 group-hover:scale-105"
                 onError={e => { e.target.src = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400'; }} />
                 
               {/* Slider Controls */}
@@ -183,7 +183,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                   <button 
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all ${idx === currentImageIndex ? 'border-purple-500' : 'border-transparent opacity-60 hover:opacity-100 bg-black/5'}`}
+                    className={`shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all ${idx === currentImageIndex ? 'border-green-500' : 'border-transparent opacity-60 hover:opacity-100 bg-gray-100 dark:bg-gray-800'}`}
                   >
                     <img src={img} alt={`thumb-${idx}`} className="w-full h-full object-cover" />
                   </button>
@@ -195,57 +195,57 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
           {/* Kolom Tengah: Info Utama (5/12) */}
           <div className="lg:col-span-5 space-y-5 sm:space-y-6">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] leading-tight mb-2">{product.name}</h2>
+              <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white leading-tight mb-2">{product.name}</h2>
               <div className="flex items-center gap-3 text-sm flex-wrap">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/10 text-yellow-500 rounded-lg">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-500 border border-yellow-100 dark:border-yellow-900/30 rounded-lg">
                   <Star size={14} className="fill-yellow-500" />
                   <span className="font-bold">{avgRating.toFixed(1)}</span>
-                  <span className="opacity-60 font-normal text-xs sm:text-sm">({ratings.length} Rating)</span>
+                  <span className="opacity-70 font-normal text-xs sm:text-sm">({ratings.length} Rating)</span>
                 </div>
-                <div className="w-1 h-1 rounded-full bg-[var(--border-color)]" />
-                <span className="text-[var(--text-secondary)] font-medium text-xs sm:text-sm">Terjual <span className="text-[var(--text-primary)]">{sold}</span></span>
+                <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+                <span className="text-gray-500 dark:text-gray-400 font-medium text-xs sm:text-sm">Terjual <span className="text-gray-900 dark:text-white font-bold">{sold}</span></span>
               </div>
             </div>
 
-            <div className="py-3 sm:py-4 border-y border-[var(--border-color)]">
-                <p className="text-3xl sm:text-4xl font-black gradient-text tracking-tight">{formatPrice(product.price)}</p>
+            <div className="py-3 sm:py-4 border-y border-gray-200 dark:border-gray-700">
+                <p className="text-3xl sm:text-4xl font-black text-green-600 dark:text-emerald-400 tracking-tight">{formatPrice(product.price)}</p>
             </div>
 
             {/* Content Tabs */}
             <div className="space-y-4">
-               <div className="flex gap-4 sm:gap-6 border-b border-[var(--border-color)]">
+               <div className="flex gap-4 sm:gap-6 border-b border-gray-200 dark:border-gray-700">
                   <button 
                     onClick={() => setActiveTab('detail')}
-                    className={`pb-2 sm:pb-3 text-xs sm:text-sm font-bold transition-all relative ${activeTab === 'detail' ? 'text-purple-500' : 'text-[var(--text-secondary)]'}`}
+                    className={`pb-2 sm:pb-3 text-xs sm:text-sm font-bold transition-all relative ${activeTab === 'detail' ? 'text-green-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                   >
                     Detail Produk
-                    {activeTab === 'detail' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-purple-500 rounded-full" />}
+                    {activeTab === 'detail' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-600 dark:bg-emerald-400 rounded-full" />}
                   </button>
                   <button 
                     onClick={() => setActiveTab('ulasan')}
-                    className={`pb-2 sm:pb-3 text-xs sm:text-sm font-bold transition-all relative ${activeTab === 'ulasan' ? 'text-purple-500' : 'text-[var(--text-secondary)]'}`}
+                    className={`pb-2 sm:pb-3 text-xs sm:text-sm font-bold transition-all relative ${activeTab === 'ulasan' ? 'text-green-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                   >
                     Ulasan ({ratings.length})
-                    {activeTab === 'ulasan' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-purple-500 rounded-full" />}
+                    {activeTab === 'ulasan' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-600 dark:bg-emerald-400 rounded-full" />}
                   </button>
                </div>
 
                {activeTab === 'detail' ? (
                  <div className="space-y-4 animate-in fade-in duration-300">
                     <div className="grid grid-cols-2 gap-y-2 text-xs sm:text-sm">
-                      <span className="text-[var(--text-secondary)]">Kategori</span>
-                      <span className="text-[var(--text-primary)] font-medium text-right lg:text-left">{product.category || 'Digital'}</span>
-                      <span className="text-[var(--text-secondary)]">Toko</span>
+                      <span className="text-gray-500 dark:text-gray-400">Kategori</span>
+                      <span className="text-gray-900 dark:text-white font-medium text-right lg:text-left">{product.category || 'Digital'}</span>
+                      <span className="text-gray-500 dark:text-gray-400">Toko</span>
                       <Link 
                         to={`/shop/${encodeURIComponent(product.profiles?.username || product.profiles?.shop_name || product.profiles?.full_name || product.seller_name)}`}
-                        className="text-purple-500 font-bold text-right lg:text-left hover:underline transition-all"
+                        className="text-green-600 dark:text-emerald-400 font-bold text-right lg:text-left hover:underline transition-all"
                         onClick={onClose}
                       >
                         {product.profiles?.shop_name || product.profiles?.full_name || product.sellerName || product.seller_name}
                       </Link>
                     </div>
                     <div className="pt-2">
-                       <p className="text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap text-sm sm:text-[15px]">
+                       <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap text-sm sm:text-[15px]">
                           {description}
                        </p>
                     </div>
@@ -254,8 +254,8 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                  <div className="space-y-4 animate-in fade-in duration-300">
                    {/* Review Form - Only for Buyers */}
                    {user?.role === 'buyer' && (
-                     <form onSubmit={handleSubmitReview} className="p-3 sm:p-4 bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)] space-y-3">
-                       <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)]">Tulis Ulasan</p>
+                     <form onSubmit={handleSubmitReview} className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3 transition-colors">
+                       <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">Tulis Ulasan</p>
                        
                        {/* Star Selector */}
                        <div className="flex items-center gap-1">
@@ -273,13 +273,13 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                                className={`transition-colors ${
                                  s <= (reviewHover || reviewScore)
                                    ? 'text-yellow-400 fill-yellow-400'
-                                   : 'text-gray-500'
+                                   : 'text-gray-300'
                                }`}
                              />
                            </button>
                          ))}
                          {reviewScore > 0 && (
-                           <span className="text-[10px] sm:text-xs text-[var(--text-secondary)] ml-2 font-medium">
+                           <span className="text-[10px] sm:text-xs text-gray-500 ml-2 font-medium">
                              {reviewScore === 1 ? 'Buruk' : reviewScore === 2 ? 'Kurang' : reviewScore === 3 ? 'Cukup' : reviewScore === 4 ? 'Bagus' : 'Sangat Bagus'}
                            </span>
                          )}
@@ -291,7 +291,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                          onChange={(e) => setReviewComment(e.target.value)}
                          placeholder="Bagikan pengalamanmu..."
                          rows={2}
-                         className="w-full bg-[var(--bg-color)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-purple-500 transition-all resize-none"
+                         className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 shadow-sm transition-all resize-none"
                        />
 
                        {/* Submit Button */}
@@ -312,24 +312,24 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
 
                    {/* Existing Reviews List */}
                    {ratings.length === 0 ? (
-                     <div className="py-6 sm:py-8 text-center bg-[var(--card-bg)] rounded-3xl border border-[var(--border-color)]">
-                        <MessageCircle size={28} className="mx-auto text-[var(--border-color)] mb-2" />
-                        <p className="text-[var(--text-secondary)] text-xs sm:text-sm">Belum ada ulasan.</p>
+                     <div className="py-6 sm:py-8 text-center bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <MessageCircle size={28} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                        <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Belum ada ulasan.</p>
                      </div>
                    ) : (
                      <div className="space-y-3">
                         {ratings.map((r, i) => (
-                          <div key={i} className="p-3 sm:p-4 bg-[var(--card-bg)] rounded-2xl border border-[var(--border-color)]">
+                          <div key={i} className="p-3 sm:p-4 bg-white dark:bg-gray-800 shadow-sm rounded-2xl border border-gray-200 dark:border-gray-700">
                             <div className="flex items-center gap-2 mb-2">
-                              <div className="w-7 h-7 sm:w-8 sm:h-8 btn-primary rounded-full flex items-center justify-center text-[10px] sm:text-xs text-white uppercase">
+                              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-full flex items-center justify-center text-[10px] sm:text-xs uppercase border border-gray-200 dark:border-gray-700">
                                 {r.user[0]}
                               </div>
-                              <span className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">{r.user}</span>
+                              <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white">{r.user}</span>
                               <div className="flex gap-0.5 ml-auto">
-                                {[1,2,3,4,5].map(s => <Star key={s} size={8} className={s <= r.score ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'} />)}
+                                {[1,2,3,4,5].map(s => <Star key={s} size={8} className={s <= r.score ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} />)}
                               </div>
                             </div>
-                            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">{r.comment}</p>
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">{r.comment}</p>
                           </div>
                         ))}
                      </div>
@@ -341,65 +341,65 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
 
           {/* Kolom Kanan: Checkout Card (3/12) */}
           <div className="lg:col-span-3">
-             <div className="glass rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 border border-[var(--border-color)] shadow-xl lg:sticky lg:top-0">
-               <h3 className="hidden lg:block font-black text-[var(--text-primary)] mb-6 text-lg">Atur jumlah dan catatan</h3>
-               <h3 className="lg:hidden font-bold text-[var(--text-primary)] mb-4 text-sm">Beli Produk Ini</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md lg:sticky lg:top-0 transition-colors">
+                <h3 className="hidden lg:block font-black text-gray-900 dark:text-white mb-6 text-lg">Atur jumlah dan catatan</h3>
+                <h3 className="lg:hidden font-bold text-gray-900 dark:text-white mb-4 text-sm">Beli Produk Ini</h3>
                
                <div className="space-y-5 sm:space-y-6">
                  {/* Qty Selector */}
-                 <div className="flex items-center justify-between sm:justify-start gap-4">
-                    <div className="flex items-center bg-[var(--card-bg)] rounded-xl border border-[var(--border-color)] p-0.5 sm:p-1">
-                      <button 
-                        onClick={() => setQty(Math.max(1, qty - 1))}
-                        className="p-1.5 sm:p-2 hover:bg-white/5 rounded-lg transition-colors text-purple-500 disabled:opacity-30"
-                        disabled={qty <= 1}
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <input 
-                        type="number" 
-                        value={qty}
-                        onChange={(e) => setQty(Math.max(1, Math.min(stock, parseInt(e.target.value) || 1)))}
-                        className="w-10 sm:w-12 text-center bg-transparent border-none focus:ring-0 font-bold text-[var(--text-primary)] text-sm sm:text-base"
-                      />
-                      <button 
-                        onClick={() => setQty(Math.min(stock, qty + 1))}
-                        className="p-1.5 sm:p-2 hover:bg-white/5 rounded-lg transition-colors text-purple-500 disabled:opacity-30"
-                        disabled={qty >= stock}
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium shrink-0">Stok: <span className="text-[var(--text-primary)] font-bold">{stock}</span></p>
-                 </div>
+                  <div className="flex items-center justify-between sm:justify-start gap-4">
+                     <div className="flex items-center bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1">
+                       <button 
+                         onClick={() => setQty(Math.max(1, qty - 1))}
+                         className="p-1.5 sm:p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-colors text-green-600 dark:text-emerald-400 disabled:opacity-30 shadow-sm border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                         disabled={qty <= 1}
+                       >
+                         <Minus size={14} />
+                       </button>
+                       <input 
+                         type="number" 
+                         value={qty}
+                         onChange={(e) => setQty(Math.max(1, Math.min(stock, parseInt(e.target.value) || 1)))}
+                         className="w-10 sm:w-12 text-center bg-transparent border-none focus:ring-0 font-bold text-gray-900 dark:text-white text-sm sm:text-base"
+                       />
+                       <button 
+                         onClick={() => setQty(Math.min(stock, qty + 1))}
+                         className="p-1.5 sm:p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-colors text-green-600 dark:text-emerald-400 disabled:opacity-30 shadow-sm border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                         disabled={qty >= stock}
+                       >
+                         <Plus size={14} />
+                       </button>
+                     </div>
+                     <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium shrink-0">Stok: <span className="text-gray-900 dark:text-white font-bold">{stock}</span></p>
+                  </div>
 
                  {/* Price Calculation */}
-                 <div className="flex items-center justify-between py-3 sm:py-4 border-t border-[var(--border-color)]">
-                    <span className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">Subtotal</span>
-                    <span className="text-lg sm:text-xl font-black text-[var(--text-primary)]">{formatPrice(product.price * qty)}</span>
+                 <div className="flex items-center justify-between py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700">
+                    <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Subtotal</span>
+                    <span className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">{formatPrice(product.price * qty)}</span>
                  </div>
 
                  {/* Action Buttons */}
                  <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
                     <button 
                       onClick={handleAddToCart}
-                      className="w-full btn-primary py-3 rounded-xl sm:rounded-2xl text-white font-black shadow-lg shadow-purple-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
+                      className="w-full btn-primary py-3 rounded-xl sm:rounded-2xl text-white font-black hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm shadow-sm"
                     >
                       <Plus size={16} className="hidden sm:block" /> Keranjang
                     </button>
                     <button 
                       onClick={handleBuyNow}
-                      className="w-full py-3 rounded-xl sm:rounded-2xl border-2 border-purple-500/50 text-purple-500 font-bold hover:bg-purple-500 hover:text-white transition-all text-xs sm:text-sm">
+                      className="w-full py-3 rounded-xl sm:rounded-2xl border-2 border-green-600 dark:border-emerald-500 text-green-600 dark:text-emerald-400 font-bold hover:bg-green-600 dark:hover:bg-emerald-500 hover:text-white transition-all text-xs sm:text-sm shadow-sm">
                       Beli Langsung
                     </button>
                  </div>
 
                  {/* Auxiliary Actions - Wishlist Only for Buyers */}
                  {user?.role === 'buyer' && (
-                   <div className="flex items-center justify-center pt-4 border-t border-[var(--border-color)]">
+                   <div className="flex items-center justify-center pt-4 border-t border-gray-200 dark:border-gray-700">
                     <button 
                       onClick={handleWishlist}
-                      className={`flex items-center gap-2 text-xs font-bold transition-colors ${isWishlisted ? 'text-red-500' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+                      className={`flex items-center gap-2 text-xs font-bold transition-colors ${isWishlisted ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
                     >
                        <Heart size={14} fill={isWishlisted ? 'currentColor' : 'none'} /> 
                        {isWishlisted ? 'Hapus dari Wishlist' : 'Tambah ke Wishlist'}

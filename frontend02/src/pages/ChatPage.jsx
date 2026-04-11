@@ -195,35 +195,35 @@ export default function ChatPage() {
     
     // Fallback to UI Avatars with Initials
     const name = p.shop_name || p.full_name || 'User';
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=16a34a&color=fff&bold=true`;
   };
 
   if (!user) return null;
 
   return (
-    <div className="h-screen bg-[var(--bg-color)] flex flex-col overflow-hidden transition-colors duration-300 pb-safe">
+    <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden transition-colors duration-300 pb-[72px] sm:pb-0">
       <Navbar />
 
       <div className="flex-1 mt-14 sm:mt-16 flex overflow-hidden relative">
         
         {/* SIDEBAR - Conversation List */}
-        <div className={`${(activePartner && !mobileShowSidebar) ? 'hidden' : 'flex'} md:flex w-full md:w-80 lg:w-96 flex-col border-r border-[var(--border-color)] bg-white/5`}>
-          <div className="p-4 sm:p-6 border-b border-[var(--border-color)]">
+        <div className={`${(activePartner && !mobileShowSidebar) ? 'hidden' : 'flex'} md:flex w-full md:w-80 lg:w-96 flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900`}>
+          <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-4 mb-4">
-              <button onClick={() => navigate(-1)} className="p-2 bg-[var(--card-bg)] hover:bg-white/10 border border-[var(--border-color)] rounded-xl text-[var(--text-secondary)]"><ArrowLeft size={18} /></button>
-              <h2 className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">Kotak Masuk</h2>
+              <button onClick={() => navigate(-1)} className="p-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 dark:text-gray-400 shadow-sm transition-colors"><ArrowLeft size={18} /></button>
+              <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">Kotak Masuk</h2>
             </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" size={16} />
-              <input type="text" placeholder="Cari pesan..." className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl pl-9 pr-4 py-2 text-sm focus:border-purple-500 transition-all" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input type="text" placeholder="Cari pesan..." className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium text-gray-900 dark:text-white" />
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2">
             {conversations.length === 0 ? (
               <div className="text-center py-10 opacity-50">
-                <MessageCircle size={40} className="mx-auto mb-3" />
-                <p className="text-sm">Belum ada percakapan</p>
+                <MessageCircle size={40} className="mx-auto mb-3 text-gray-400" />
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Belum ada percakapan</p>
               </div>
             ) : (
               conversations.map((conv, idx) => (
@@ -233,14 +233,14 @@ export default function ChatPage() {
                   setActivePartner(conv.user); 
                   setMobileShowSidebar(false); 
                 }}
-                  className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer transition-all ${activePartner?.id === conv.user.id ? 'bg-purple-600 text-white shadow-lg' : 'hover:bg-white/5 text-[var(--text-primary)]'}`}>
-                  <img src={getAvatar(conv.user)} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-white/20" />
+                  className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer transition-all ${activePartner?.id === conv.user.id ? 'bg-green-600 dark:bg-green-500 text-white shadow-lg' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 border border-transparent hover:border-gray-200 dark:hover:border-gray-700'}`}>
+                  <img src={getAvatar(conv.user)} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shadow-sm bg-white dark:bg-gray-800" />
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold truncate text-xs sm:text-sm">{conv.user.shop_name || conv.user.full_name}</h4>
-                      <span className={`text-[9px] sm:text-[10px] ${activePartner?.id === conv.user.id ? 'text-white/70' : 'opacity-70'}`}>{formatTime(conv.timestamp)}</span>
+                      <h4 className={`font-bold truncate text-xs sm:text-sm ${activePartner?.id === conv.user.id ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{conv.user.shop_name || conv.user.full_name}</h4>
+                      <span className={`text-[9px] sm:text-[10px] font-bold ${activePartner?.id === conv.user.id ? 'text-green-200' : 'text-gray-400 dark:text-gray-500'}`}>{formatTime(conv.timestamp)}</span>
                     </div>
-                    <p className={`text-[11px] sm:text-xs truncate ${activePartner?.id === conv.user.id ? 'text-white/80' : 'opacity-70'}`}>{conv.lastMessage}</p>
+                    <p className={`text-[11px] sm:text-xs truncate font-medium ${activePartner?.id === conv.user.id ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'}`}>{conv.lastMessage}</p>
                   </div>
                 </div>
               ))
@@ -249,11 +249,11 @@ export default function ChatPage() {
         </div>
 
         {/* MAIN CHAT - Message View */}
-        <div className={`${(!activePartner || mobileShowSidebar) ? 'hidden' : 'flex'} md:flex flex-1 flex-col bg-[var(--bg-color)] relative`}>
+        <div className={`${(!activePartner || mobileShowSidebar) ? 'hidden' : 'flex'} md:flex flex-1 flex-col bg-gray-50 dark:bg-gray-950 relative`}>
           {activePartner ? (
             <>
               {/* Header */}
-              <div className="p-3 sm:p-4 md:px-8 md:py-5 border-b border-[var(--border-color)] flex items-center justify-between glass sticky top-0 z-10">
+              <div className="p-3 sm:p-4 md:px-8 md:py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-10 transition-colors">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <button 
                     onClick={() => { 
@@ -263,42 +263,42 @@ export default function ChatPage() {
                         setMobileShowSidebar(true);
                       }
                     }} 
-                    className="p-2 sm:p-2.5 bg-[var(--card-bg)] hover:bg-white/10 border border-[var(--border-color)] rounded-xl text-[var(--text-secondary)] transition-all md:hidden">
+                    className="p-2 sm:p-2.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 dark:text-gray-400 transition-all md:hidden shadow-sm">
                     <ArrowLeft size={18} />
                   </button>
-                  <img src={getAvatar(activePartner)} alt="" className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-purple-500/20" />
+                  <img src={getAvatar(activePartner)} alt="" className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full object-cover border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors" />
                   <div className="min-w-0">
-                    <h3 className="font-bold text-[var(--text-primary)] text-sm sm:text-base md:text-lg truncate">{activePartner.shop_name || activePartner.full_name}</h3>
-                    <p className="text-[9px] sm:text-[10px] font-bold text-green-500 uppercase tracking-widest">Active Now</p>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg truncate">{activePartner.shop_name || activePartner.full_name}</h3>
+                    <p className="text-[9px] sm:text-[10px] font-black text-green-500 dark:text-emerald-400 uppercase tracking-widest">Active Now</p>
                   </div>
                 </div>
-                <button className="p-2 text-[var(--text-secondary)] hover:bg-white/5 rounded-xl"><MoreVertical size={18} /></button>
+                <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl"><MoreVertical size={18} /></button>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-4 sm:space-y-6 bg-dots-grid">
+              <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-4 sm:space-y-6 bg-gray-50 dark:bg-gray-900">
                 <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
                   {messages.map((msg, idx) => (
                     <div key={idx} className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                       <div className={`max-w-[88%] sm:max-w-[85%] md:max-w-[70%] space-y-1`}>
-                        <div className={`px-4 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl sm:rounded-[1.5rem] text-[13px] sm:text-[15px] font-medium leading-relaxed shadow-sm ${msg.sender_id === user.id ? 'bg-purple-600 text-white rounded-tr-none' : 'bg-[var(--card-bg)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-tl-none'}`}>
+                        <div className={`px-4 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl sm:rounded-[1.5rem] text-[13px] sm:text-[15px] font-medium leading-relaxed shadow-sm ${msg.sender_id === user.id ? 'bg-green-600 dark:bg-green-500 text-white rounded-tr-none' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-none font-semibold transition-colors'}`}>
                           
                           {/* Attachment Rendering */}
                           {msg.attachment_url && (
                             <div className="mb-2 sm:mb-3">
                               {msg.attachment_type === 'image' ? (
                                 <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
-                                  <img src={msg.attachment_url} alt="Attachment" className="max-w-full rounded-lg border border-white/10 max-h-60 sm:max-h-80 object-cover" />
+                                  <img src={msg.attachment_url} alt="Attachment" className="max-w-full rounded-lg border border-black/10 max-h-60 sm:max-h-80 object-cover bg-white" />
                                 </a>
                               ) : (
                                 <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" 
-                                  className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl border ${msg.sender_id === user.id ? 'bg-white/10 border-white/20' : 'bg-[var(--bg-color)] border-[var(--border-color)]'}`}>
-                                  <File className="text-purple-400" size={20} />
+                                  className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-xl border ${msg.sender_id === user.id ? 'bg-white/10 border-white/20' : 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 transition-colors'}`}>
+                                  <File className={`${msg.sender_id === user.id ? "text-green-200" : "text-green-600 dark:text-emerald-400"}`} size={20} />
                                   <div className="min-w-0 flex-1">
                                     <p className="text-[10px] sm:text-xs font-bold truncate">File Lampiran</p>
-                                    <p className="text-[8px] sm:text-[10px] opacity-70">Klik untuk unduh</p>
+                                    <p className="text-[8px] sm:text-[10px] font-medium opacity-80">Klik untuk unduh</p>
                                   </div>
-                                  <Download size={16} />
+                                  <Download className="dark:text-gray-400" size={16} />
                                 </a>
                               )}
                             </div>
@@ -306,7 +306,7 @@ export default function ChatPage() {
                           
                           {msg.content}
                         </div>
-                        <p className={`text-[9px] sm:text-[10px] text-[var(--text-secondary)] font-black uppercase ${msg.sender_id === user.id ? 'text-right' : 'text-left'}`}>{formatTime(msg.created_at)}</p>
+                        <p className={`text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase ${msg.sender_id === user.id ? 'text-right' : 'text-left'}`}>{formatTime(msg.created_at)}</p>
                       </div>
                     </div>
                   ))}
@@ -315,41 +315,41 @@ export default function ChatPage() {
               </div>
 
               {/* Input Area */}
-              <div className="p-3 sm:p-4 md:px-10 md:py-6 border-t border-[var(--border-color)] glass">
+              <div className="p-3 sm:p-4 md:px-10 md:py-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 transition-colors">
                 <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative">
                   
                   {/* Staging Preview Area */}
                   {stagedFile && (
                     <div className="absolute bottom-full left-0 right-0 mb-3 animate-in fade-in slide-in-from-bottom-2 duration-300 px-2 sm:px-0">
-                      <div className="glass p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-purple-500/30 flex items-center gap-3 sm:gap-4 bg-[var(--card-bg)] shadow-2xl">
+                      <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center gap-3 sm:gap-4 shadow-lg transition-colors">
                         {filePreview ? (
-                          <img src={filePreview} alt="Preview" className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl object-cover" />
+                          <img src={filePreview} alt="Preview" className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl object-cover bg-gray-50 dark:bg-gray-900" />
                         ) : (
-                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl bg-purple-500/10 flex items-center justify-center"><File className="text-purple-500" /></div>
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl bg-green-50 dark:bg-green-900/40 flex items-center justify-center border border-green-100 dark:border-green-900/50"><File className="text-green-600 dark:text-emerald-400" /></div>
                         )}
                         <div className="pr-8 min-w-0">
-                          <p className="text-[10px] sm:text-xs font-black text-[var(--text-primary)] truncate max-w-[120px] sm:max-w-[200px]">{stagedFile.name}</p>
-                          <p className="text-[8px] sm:text-[10px] font-bold text-purple-500 uppercase tracking-widest">Siap Dikirim</p>
+                          <p className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white truncate max-w-[120px] sm:max-w-[200px]">{stagedFile.name}</p>
+                          <p className="text-[8px] sm:text-[10px] font-bold text-green-600 dark:text-emerald-400 uppercase tracking-widest">Siap Dikirim</p>
                         </div>
-                        <button type="button" onClick={() => { setStagedFile(null); setFilePreview(null); }} className="absolute top-1 sm:top-2 right-1 sm:right-2 p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-full transition-all"><X size={12} /></button>
+                        <button type="button" onClick={() => { setStagedFile(null); setFilePreview(null); }} className="absolute top-1 sm:top-2 right-1 sm:right-2 p-1.5 bg-red-50 dark:bg-red-900/40 hover:bg-red-500 text-red-500 hover:text-white rounded-full transition-all border border-red-100 dark:border-red-900/50 hover:border-red-500"><X size={12} /></button>
                       </div>
                     </div>
                   )}
 
                   <div className="flex items-center gap-2 sm:gap-4">
                     <div className="flex items-center gap-0.5 sm:gap-1">
-                       <button type="button" onClick={() => { fileInputRef.current.accept = "image/*"; fileInputRef.current.click(); }} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:bg-white/10 rounded-xl" title="Gambar"><ImageIcon size={20} /></button>
-                       <button type="button" onClick={() => { fileInputRef.current.accept = "*/*"; fileInputRef.current.click(); }} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:bg-white/10 rounded-xl" title="File"><Paperclip size={20} /></button>
+                       <button type="button" onClick={() => { fileInputRef.current.accept = "image/*"; fileInputRef.current.click(); }} className="p-2 sm:p-2.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors" title="Gambar"><ImageIcon size={20} /></button>
+                       <button type="button" onClick={() => { fileInputRef.current.accept = "*/*"; fileInputRef.current.click(); }} className="p-2 sm:p-2.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors" title="File"><Paperclip size={20} /></button>
                     </div>
                     
                     <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
 
                     <div className="flex-1 relative">
-                       <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Ketik pesan..." className="w-full bg-[var(--card-bg)] border border-[var(--border-color)] rounded-xl sm:rounded-2xl pl-4 pr-10 py-3 sm:py-4 text-xs sm:text-sm text-[var(--text-primary)] focus:outline-none focus:border-purple-500 transition-all shadow-inner" />
-                       <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-purple-500 hidden sm:block"><Smile size={20} /></button>
+                       <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Ketik pesan..." className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl sm:rounded-2xl pl-4 pr-10 py-3 sm:py-4 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all shadow-sm font-medium" />
+                       <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-600 hidden sm:block transition-colors"><Smile size={20} /></button>
                     </div>
                     
-                    <button type="submit" disabled={(!newMessage.trim() && !stagedFile) || sending} className="p-3 sm:p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl sm:rounded-2xl shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center shrink-0">
+                    <button type="submit" disabled={(!newMessage.trim() && !stagedFile) || sending} className="p-3 sm:p-4 btn-primary text-white rounded-xl sm:rounded-2xl shadow-sm active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center shrink-0">
                       {sending ? <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send size={20} className="sm:ml-1" />}
                     </button>
                   </div>
@@ -358,9 +358,9 @@ export default function ChatPage() {
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-6 sm:p-10">
-               <div className="w-24 h-24 sm:w-32 sm:h-32 bg-purple-600/5 rounded-[2.5rem] sm:rounded-[3rem] flex items-center justify-center mb-6 sm:mb-10 border border-purple-500/10"><MessageCircle size={40} className="text-purple-500" /></div>
-               <h3 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] mb-3 sm:mb-4">Kotak Masuk KaryaNusa</h3>
-               <p className="max-w-xs sm:max-w-md text-sm sm:text-base text-[var(--text-secondary)] font-medium">Pilih teman bicara untuk mulai berbagi file digital secara real-time.</p>
+               <div className="w-24 h-24 sm:w-32 sm:h-32 bg-green-50 dark:bg-green-900/20 rounded-[2.5rem] sm:rounded-[3rem] flex items-center justify-center mb-6 sm:mb-10 border border-green-100 dark:border-green-900/30 shadow-sm transition-colors"><MessageCircle size={40} className="text-green-600 dark:text-emerald-400" /></div>
+               <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-3 sm:mb-4">Kotak Masuk KaryaNusa</h3>
+               <p className="max-w-xs sm:max-w-md text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium">Pilih teman bicara untuk mulai berbagi file digital secara real-time.</p>
             </div>
           )}
         </div>

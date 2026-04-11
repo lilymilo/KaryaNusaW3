@@ -43,7 +43,7 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
   };
 
   return (
-    <div onClick={onClick} className="glass relative rounded-2xl overflow-hidden card-hover cursor-pointer group border border-[var(--border-color)]">
+    <div onClick={onClick} className="bg-white dark:bg-gray-800 relative rounded-2xl overflow-hidden card-hover cursor-pointer group border border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-300">
       <div className="relative overflow-hidden h-48">
         <img src={product.image} alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -57,10 +57,10 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
             <button
               onClick={handleWishlist}
               disabled={wishlistLoading}
-              className={`p-2 backdrop-blur-md rounded-full transition-all ${
+              className={`p-2 backdrop-blur-md rounded-full transition-all border ${
                 isWishlisted 
-                ? 'bg-red-500 text-white shadow-lg' 
-                : 'bg-black/20 text-white hover:bg-white/20'
+                ? 'bg-red-50 dark:bg-red-900/30 text-red-500 border-red-200 dark:border-red-800 shadow-sm' 
+                : 'bg-white/80 dark:bg-gray-800/80 text-gray-400 dark:text-gray-500 hover:text-red-500 border-gray-200 dark:border-gray-700 hover:bg-white'
               }`}
             >
               <Heart size={16} fill={isWishlisted ? "currentColor" : "none"} />
@@ -84,30 +84,30 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
       </div>
 
       <div className="p-4">
-        <h3 className="font-semibold text-[var(--text-primary)] mb-1 line-clamp-1">{product.name}</h3>
-        <p className="text-[var(--text-secondary)] text-xs mb-3 line-clamp-2">{product.description}</p>
+        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-1 line-clamp-1">{product.name}</h3>
+        <p className="text-gray-500 dark:text-gray-400 text-xs mb-3 line-clamp-2">{product.description}</p>
 
         <div className="flex items-center gap-2 mb-3">
           <div className="flex items-center gap-1">
             {[1,2,3,4,5].map(i => (
               <Star key={i} size={12}
-                className={i <= Math.round(product.avg_rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-[var(--text-secondary)] opacity-30'} />
+                className={i <= Math.round(product.avg_rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} />
             ))}
           </div>
-          <span className="text-xs text-[var(--text-secondary)]">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
             {(product.avg_rating || 0) > 0 ? (product.avg_rating || 0).toFixed(1) : 'Belum ada'} · {product.sold} terjual
           </span>
         </div>
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-lg font-bold gradient-text">{formatPrice(product.price)}</p>
-            <p className="text-xs text-[var(--text-secondary)] opacity-70 flex items-center gap-1">
+            <p className="text-lg font-bold text-green-600 dark:text-emerald-400">{formatPrice(product.price)}</p>
+            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
               {product.profiles?.shop_name || product.profiles?.full_name || product.seller_name || product.sellerName}
             </p>
           </div>
           <button onClick={handleAddToCart}
-            className="p-2.5 btn-primary rounded-xl text-white hover:opacity-90 transition-opacity">
+            className="p-2.5 btn-primary rounded-xl text-white shadow-sm">
             <ShoppingCart size={18} />
           </button>
         </div>
@@ -116,20 +116,20 @@ export default function ProductCard({ product, onClick, onDelete, initialWishlis
       {/* Delete Confirmation Overlay */}
       {showDeleteConfirm && (
         <div 
-          className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-200"
+          className="absolute inset-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-200"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
           </div>
-          <p className="text-white font-bold text-center mb-1 text-lg">Hapus Produk?</p>
-          <p className="text-gray-300 text-center text-sm mb-6">Tindakan ini tidak dapat dibatalkan.</p>
+          <p className="text-gray-900 dark:text-white font-bold text-center mb-1 text-lg">Hapus Produk?</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center text-sm mb-6">Tindakan ini tidak dapat dibatalkan.</p>
           
           <div className="flex gap-3 w-full">
-            <button 
-              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }} 
-              className="flex-1 py-3 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
-            >
+              <button 
+                onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }} 
+                className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
               Batal
             </button>
             <button 
