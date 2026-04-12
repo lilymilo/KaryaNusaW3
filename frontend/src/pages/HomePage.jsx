@@ -1,18 +1,20 @@
-import { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { Search, X } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import ProductCard from '../components/ProductCard';
-import ProductModal from '../components/ProductModal';
 import CartDrawer from '../components/CartDrawer';
 import toast from 'react-hot-toast';
+
+const ProductModal = lazy(() => import('../components/ProductModal'));
 
 const CATEGORIES = ['all', 'E-book', 'Course', 'Software', 'Template', 'Design', 'Audio', 'Other'];
 
 export default function HomePage() {
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
+  const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [wishlistIds, setWishlistIds] = useState([]);
   const [search, setSearch] = useState('');
@@ -28,18 +30,33 @@ export default function HomePage() {
       if (search) params.search = search;
       if (category !== 'all') params.category = category;
       if (sort) params.sort = sort;
-      const { data } = await api.get('/products', { params });
-      setProducts(data);
+      
+      const requests = [api.get('/products', { params })];
+      if (search) {
+        requests.push(api.get('/shop/search/users', { params: { q: search } }));
+      }
+
+      const responses = await Promise.all(requests);
+      setProducts(responses[0].data);
+      
+      if (search && responses[1]) {
+        setShops(responses[1].data);
+      } else {
+        setShops([]);
+      }
 
       if (user && user.role === 'buyer') {
         const { data: wishData } = await api.get('/wishlist');
         setWishlistIds(wishData.map(item => item.product_id));
       }
-    } catch { setProducts([]); }
+    } catch { 
+      setProducts([]); 
+      setShops([]);
+    }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchProducts(); }, [category, sort]); // eslint-disable-line
+  useEffect(() => { fetchProducts(); }, [category, sort, user?.id]); // eslint-disable-line
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -61,21 +78,21 @@ export default function HomePage() {
       <Navbar onCartOpen={() => setCartOpen(true)} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
       {selected && (
-        <ProductModal 
-          product={selected} 
-          onClose={() => setSelected(null)} 
-          initialWishlisted={wishlistIds.includes(selected.id)}
-        />
+        <Suspense fallback={null}>
+          <ProductModal
+            product={selected}
+            onClose={() => setSelected(null)}
+            initialWishlisted={wishlistIds.includes(selected.id)}
+          />
+        </Suspense>
       )}
 
       <div className="pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
-        {/* Header */}
         <div className="py-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Marketplace <span className="text-green-600 dark:text-emerald-400">KaryaNusa</span></h1>
           <p className="text-gray-600 dark:text-gray-400">Temukan produk terbaik dari seluruh penjuru Nusantara</p>
         </div>
 
-        {/* Search & Filter */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <form onSubmit={handleSearch} className="flex-1 relative">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -93,7 +110,6 @@ export default function HomePage() {
           </form>
 
           <div className="grid grid-cols-2 sm:flex gap-3">
-            {/* Category Dropdown (Mobile Only) */}
             <select 
               value={category} 
               onChange={e => setCategory(e.target.value)}
@@ -116,7 +132,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Category Filter - Desktop Only */}
         <div className="hidden sm:flex gap-2 overflow-x-auto pb-2 mb-8 scrollbar-hide">
           {CATEGORIES.map(cat => (
             <button key={cat} onClick={() => setCategory(cat)}
@@ -130,9 +145,29 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Products Grid */}
+        {!loading && search && shops.length > 0 && (
+          <div className="mb-10 animate-in fade-in slide-in-from-bottom-2">
+             <div className="flex items-center justify-between mb-4">
+               <h2 className="text-xl font-bold text-gray-900 dark:text-white border-l-4 border-green-500 pl-3">Toko / Kreator Terkait</h2>
+               <span className="text-sm text-gray-500 dark:text-gray-400">{shops.length} hasil</span>
+             </div>
+             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+               {shops.map(shop => (
+                 <a href={`/shop/${shop.username || shop.id}`} key={shop.id} className="min-w-[200px] w-[200px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-all flex-shrink-0 group">
+                    <img src={shop.shop_logo_url || shop.avatar || `https://ui-avatars.com/api/?name=${shop.shop_name || shop.full_name}&background=16a34a&color=fff`} className="w-16 h-16 rounded-full object-cover mb-3 bg-gray-100 dark:bg-gray-700 border-2 border-transparent group-hover:border-green-500 transition-colors" />
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm w-full truncate">{shop.shop_name || shop.full_name}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 w-full truncate mb-3">@{shop.username || 'user'}</p>
+                    <button className="w-full py-1.5 border border-green-500 text-green-600 dark:text-emerald-400 rounded-lg text-xs font-bold hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
+                      Kunjungi Toko
+                    </button>
+                 </a>
+               ))}
+             </div>
+          </div>
+        )}
+
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden animate-pulse border border-gray-200 dark:border-gray-700 shadow-sm">
                 <div className="h-48 bg-gray-200 dark:bg-gray-700" />
@@ -144,27 +179,65 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-        ) : products.length === 0 ? (
+        ) : products.length === 0 && shops.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
             <Search size={48} className="text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-300 text-lg font-medium">Produk tidak ditemukan</p>
+            <p className="text-gray-600 dark:text-gray-300 text-lg font-medium">Produk atau Kreator tidak ditemukan</p>
             <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Coba kata kunci atau kategori lain</p>
           </div>
         ) : (
-          <>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{products.length} produk ditemukan</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map(p => (
-                <ProductCard 
-                  key={p.id} 
-                  product={p} 
-                  onClick={() => setSelected(p)} 
-                  onDelete={handleDelete}
-                  initialWishlisted={wishlistIds.includes(p.id)}
-                />
-              ))}
+          <div className="space-y-12">
+            {/* My Products Section */}
+            {user && products.some(p => p.seller_id === user.id) && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white border-l-4 border-green-600 pl-3">Produk Anda</h2>
+                  <a href="/profile" className="text-sm font-bold text-green-600 hover:underline">Kelola Semua</a>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+                  {products.filter(p => p.seller_id === user.id).map(p => (
+                    <ProductCard 
+                      key={p.id} 
+                      product={p} 
+                      onClick={() => setSelected(p)} 
+                      onDelete={handleDelete}
+                      initialWishlisted={wishlistIds.includes(p.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Other Products Section */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white border-l-4 border-gray-300 dark:border-gray-700 pl-3">
+                  {user && products.some(p => p.seller_id === user.id) ? 'Jelajahi Produk Nusantara' : 'Semua Produk'}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                  {products.filter(p => !user || p.seller_id !== user.id).length} produk
+                </p>
+              </div>
+              
+              {products.filter(p => !user || p.seller_id !== user.id).length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
+                  {products.filter(p => !user || p.seller_id !== user.id).map(p => (
+                    <ProductCard 
+                      key={p.id} 
+                      product={p} 
+                      onClick={() => setSelected(p)} 
+                      onDelete={handleDelete}
+                      initialWishlisted={wishlistIds.includes(p.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-white dark:bg-gray-900/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+                  <p className="text-gray-500 dark:text-gray-400 italic">Tidak ada produk lain yang tersedia saat ini.</p>
+                </div>
+              )}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

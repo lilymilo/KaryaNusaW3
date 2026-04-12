@@ -1,25 +1,29 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, LogIn, User, Store } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, LogIn, User, Store, Wallet, Loader2 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
+import { useWallet, WALLET_TYPES } from '../context/WalletContext';
+import { MetaMaskIcon } from '../components/icons/WalletIcons';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, loginWithWallet } = useAuth();
+  const { connectWallet, signMessage, disconnectWallet } = useWallet();
   const navigate = useNavigate();
-  const [role, setRole] = useState('buyer');
   const [form, setForm] = useState({ email: '', password: '' });
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [walletLoading, setWalletLoading] = useState(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.email || !form.password) return toast.error('Semua field wajib diisi');
-    
+
     setLoading(true);
     try {
-      await login(form.email, form.password, role);
+      await login(form.email, form.password);
       toast.success('Selamat datang kembali!');
       navigate('/home');
     } catch (err) {
@@ -31,6 +35,31 @@ export default function LoginPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleWalletLogin = async (type) => {
+    setWalletLoading(type);
+    try {
+      const { address, chain } = await connectWallet(type);
+
+      const timestamp = Date.now();
+      const message = `Masuk ke KaryaNusa\n\nWallet: ${address}\nTimestamp: ${timestamp}\nNonce: ${Math.random().toString(36).substring(2)}`;
+
+      const signature = await signMessage(message, type);
+
+      await loginWithWallet(address, signature, message, chain);
+
+      toast.success('Wallet berhasil terhubung!');
+      navigate('/profile');
+    } catch (err) {
+      disconnectWallet();
+      const body = err.response?.data;
+      const msg = body?.error || err.message || 'Gagal menghubungkan wallet';
+      const hint = body?.hint;
+      toast.error(hint ? `${msg} (${hint})` : msg);
+    } finally {
+      setWalletLoading(null);
     }
   };
 
@@ -58,37 +87,14 @@ export default function LoginPage() {
         <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group transition-colors">
           <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
 
-          {/* Role Selection Toggle */}
-          <div className="mb-8 relative z-10">
-            <div className="flex bg-gray-50 dark:bg-gray-800 rounded-2xl p-1.5 border border-gray-200 dark:border-gray-700 shadow-inner">
-              <button
-                type="button"
-                onClick={() => setRole('buyer')}
-                className={`flex-1 py-3 text-sm font-black rounded-xl transition-all flex items-center justify-center gap-2 ${
-                  role === 'buyer' ? 'bg-green-600 dark:bg-emerald-500 text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                <User size={18} /> Pembeli
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('seller')}
-                className={`flex-1 py-3 text-sm font-black rounded-xl transition-all flex items-center justify-center gap-2 ${
-                  role === 'seller' ? 'bg-green-600 dark:bg-emerald-500 text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                <Store size={18} /> Penjual
-              </button>
-            </div>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
             <div className="space-y-2">
-              <label className="text-xs font-black text-gray-500 dark:text-gray-400 ml-1 uppercase tracking-wider">Email Address</label>
+              <label className="text-xs font-black text-gray-500 dark:text-gray-400 ml-1 uppercase tracking-wider">Email / Username / Wallet</label>
               <div className="relative">
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
-                  type="email" placeholder="nama@email.com" required
+                  type="text" placeholder="nama@email.com atau 0x..." required
                   value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
                   className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl pl-12 pr-4 py-4 text-gray-900 dark:text-white font-bold focus:border-green-500 outline-none transition-all shadow-sm focus:ring-2 focus:ring-green-500/20"
                 />
@@ -127,7 +133,7 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={() => loginWithGoogle(role)}
+            onClick={() => loginWithGoogle()}
             className="w-full relative z-10 flex items-center justify-center gap-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 py-4 px-6 rounded-2xl text-gray-900 dark:text-white font-black transition-all active:scale-[0.98] group"
           >
             <svg className="w-6 h-6 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
@@ -139,6 +145,54 @@ export default function LoginPage() {
             Lanjut dengan Google
           </button>
 
+          <div className="relative my-8 z-10">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700"></div></div>
+            <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest text-gray-500 dark:text-gray-400">
+              <span className="px-3 bg-white dark:bg-gray-900 font-black flex items-center gap-1.5">
+                <Wallet size={12} /> Atau via Wallet
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3 relative z-10">
+            {!showWalletModal ? (
+              <button
+                type="button"
+                onClick={() => setShowWalletModal(true)}
+                className="w-full flex items-center justify-center gap-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 py-4 px-6 rounded-2xl text-gray-900 dark:text-white font-black transition-all active:scale-[0.98] hover:shadow-md"
+              >
+                <Wallet size={20} className="text-gray-600 dark:text-gray-300" />
+                <span>Pilih Penyedia Wallet</span>
+              </button>
+            ) : (
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3 shadow-inner">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Pilih Web3 Wallet</span>
+                  <button onClick={() => setShowWalletModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <ArrowLeft size={16} />
+                  </button>
+                </div>
+                <button
+                  id="login-metamask-btn"
+                  onClick={() => handleWalletLogin(WALLET_TYPES.METAMASK)}
+                  disabled={walletLoading !== null}
+                  className="w-full flex items-center justify-center gap-4 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 hover:from-orange-100 hover:to-amber-100 dark:hover:from-orange-900/40 dark:hover:to-amber-900/40 border border-orange-200 dark:border-orange-800/50 py-3 px-4 rounded-xl text-gray-900 dark:text-white font-black transition-all active:scale-[0.98] group disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {walletLoading === WALLET_TYPES.METAMASK ? (
+                    <Loader2 size={24} className="animate-spin text-orange-500" />
+                  ) : (
+                    <div className="group-hover:scale-110 transition-transform">
+                      <MetaMaskIcon />
+                    </div>
+                  )}
+                  <span>{walletLoading === WALLET_TYPES.METAMASK ? 'Menghubungkan...' : 'MetaMask'}</span>
+                  <span className="ml-auto text-[10px] uppercase tracking-wider font-bold text-orange-500/70 dark:text-orange-400/70">EVM</span>
+                </button>
+
+              </div>
+            )}
+          </div>
+
           <div className="mt-10 text-center relative z-10">
             <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">
               Belum punya akun?{' '}
@@ -146,7 +200,7 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-        
+
         <p className="text-center text-gray-400 dark:text-gray-600 opacity-50 text-[9px] mt-10 uppercase tracking-[0.3em] font-black">
           Powered by Secure Multi-Auth Shield
         </p>

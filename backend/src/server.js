@@ -1,6 +1,6 @@
+import './config/loadEnv.js';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import productRoutes from './routes/productRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
@@ -9,11 +9,11 @@ import wishlistRoutes from './routes/wishlistRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import shopRoutes from './routes/shopRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import socialRoutes from './routes/socialRoutes.js';
+import threadRoutes from './routes/threadRoutes.js';
 
-dotenv.config();
 const app = express();
 
-// Proactive Debugging: Check for missing ENV variables
 const requiredEnvs = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
 const missingEnvs = requiredEnvs.filter(env => !process.env[env]);
 if (missingEnvs.length > 0) {
@@ -21,7 +21,6 @@ if (missingEnvs.length > 0) {
   process.exit(1);
 }
 
-// Global Process Event Handlers for Debugging
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
@@ -42,8 +41,9 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/social', socialRoutes);
+app.use('/api/threads', threadRoutes);
 
-// Health check with more info
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -53,7 +53,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Global Error Handler Middleware
 app.use((err, req, res, next) => {
   console.error('SERVER ERROR:', err.stack);
   res.status(500).json({ error: 'Terjadi kesalahan internal pada server.' });
@@ -80,4 +79,4 @@ if (!process.env.VERCEL) {
   });
 }
 
-export default app;
+export default app;

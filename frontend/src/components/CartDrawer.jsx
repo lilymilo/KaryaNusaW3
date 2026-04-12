@@ -1,8 +1,7 @@
 import { X, Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
-
-const formatPrice = (p) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p);
+import { formatPrice } from '../utils/format';
 
 export default function CartDrawer({ open, onClose }) {
   const { cart, updateCart, removeFromCart, cartTotal } = useCart();

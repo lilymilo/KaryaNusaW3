@@ -24,7 +24,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100 flex flex-col font-sans transition-colors duration-300 overflow-x-hidden">
-      {/* Navbar */}
       <nav className="w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16 md:h-20">
           <Link to="/" className="flex items-center gap-2">
@@ -45,7 +44,6 @@ export default function LandingPage() {
               )}
             </button>
 
-            {/* Desktop Links */}
             <div className="hidden md:flex items-center gap-4">
               <Link to="/login" className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 font-bold hover:text-green-600 dark:hover:text-emerald-400 transition-colors">
                 Masuk
@@ -55,7 +53,6 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Mobile Menu Toggle */}
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
@@ -65,7 +62,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
         {isMenuOpen && (
           <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 animate-in slide-in-from-top duration-300">
             <div className="px-4 pt-2 pb-6 space-y-3">
@@ -80,10 +76,8 @@ export default function LandingPage() {
         )}
       </nav>
 
-      {/* Hero Section — Always visible, no scroll animation */}
       <main className="bg-white dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-16 md:py-24 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          {/* Kiri: Hook */}
           <div>
             <span className="text-sm font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-4 py-1.5 rounded-full uppercase tracking-widest border border-green-200 dark:border-green-800 inline-flex items-center gap-2">
               <Globe size={16} /> Web3 Terintegrasi
@@ -101,7 +95,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Kanan: Logo (Hidden on Mobile) */}
           <div className="hidden md:flex justify-center items-center p-4 md:p-8">
             <div className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 relative flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-full shadow-inner border border-gray-100 dark:border-gray-700 p-8 transition-colors duration-300">
                <img src={logo} alt="KaryaNusa Web3 Visual" className="w-full h-full object-contain drop-shadow-xl hover:scale-105 transition-transform duration-500" />
@@ -110,7 +103,6 @@ export default function LandingPage() {
         </div>
       </main>
 
-      {/* Problem Section — Scroll Animated */}
       <ScrollReveal>
         <section id="masalah" className="py-12 md:py-20 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 transition-colors duration-300">
           <div className="max-w-4xl mx-auto px-4 text-center">
@@ -124,7 +116,6 @@ export default function LandingPage() {
         </section>
       </ScrollReveal>
 
-      {/* Solution Section — Scroll Animated with stagger */}
       <ScrollReveal>
         <section className="py-12 md:py-20 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 transition-colors duration-300">
           <div className="max-w-7xl mx-auto px-4 md:px-6">
@@ -168,7 +159,6 @@ export default function LandingPage() {
         </section>
       </ScrollReveal>
 
-      {/* Why KaryaNusa — Scroll Animated */}
       <ScrollReveal>
         <section className="py-12 md:py-20 bg-green-50 dark:bg-green-950/30 border-y border-green-100 dark:border-green-900/50 transition-colors duration-300">
           <div className="max-w-4xl mx-auto px-4 text-center">
@@ -196,7 +186,6 @@ export default function LandingPage() {
         </section>
       </ScrollReveal>
 
-      {/* CTA Section — Scroll Animated */}
       <ScrollReveal>
         <section className="bg-gray-900 dark:bg-black py-16 md:py-24 text-center relative overflow-hidden transition-colors duration-300">
           <div className="absolute top-0 right-0 p-32 bg-green-500 opacity-5 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
@@ -216,7 +205,6 @@ export default function LandingPage() {
         </section>
       </ScrollReveal>
 
-      {/* Footer */}
       <footer className="bg-white dark:bg-gray-900 py-8 px-4 text-center border-t border-gray-100 dark:border-gray-800 transition-colors duration-300">
          <p className="text-gray-400 dark:text-gray-500 text-sm font-bold">© 2026 KaryaNusa Marketplace. Mengabdi pada kemerdekaan digital kreator Nusantara.</p>
       </footer>

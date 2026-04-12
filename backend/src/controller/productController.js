@@ -1,10 +1,10 @@
 import { supabase, getAuthClient } from '../config/supabaseClient.js';
+import { mintNFT, isNFTEnabled } from '../services/nftService.js';
 
-// 1. GET all products with Filtering
 export const getProducts = async (req, res) => {
   try {
     const { search, category, minPrice, maxPrice, sort } = req.query;
-    let query = supabase.from('products').select('*, product_ratings(*), profiles(shop_name, full_name)');
+    let query = supabase.from('products').select('*, product_ratings(*), profiles(shop_name, full_name, wallet_address)');
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -36,13 +36,12 @@ export const getProducts = async (req, res) => {
   }
 };
 
-// 2. GET single product
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
     const { data, error } = await supabase
       .from('products')
-      .select('*, product_ratings(*), profiles(shop_name, full_name)')
+      .select('*, product_ratings(*), profiles(shop_name, full_name, wallet_address)')
       .eq('id', id)
       .single();
 
@@ -56,7 +55,6 @@ export const getProductById = async (req, res) => {
   }
 };
 
-// 3. Add product (with Image Upload)
 export const createProduct = async (req, res) => {
   try {
     const { name, price, description, category, stock } = req.body;
@@ -65,12 +63,11 @@ export const createProduct = async (req, res) => {
       return res.status(400).json({ error: "Nama dan harga produk wajib diisi" });
     }
 
-    let imageUrl = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400';
+    let imageUrl = null;
     let imagesArr = [];
 
     const authSupabase = getAuthClient(req);
 
-    // Handle Upload to Supabase Storage
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const fileExt = file.originalname.split('.').pop();
@@ -95,19 +92,14 @@ export const createProduct = async (req, res) => {
       imageUrl = imagesArr[0];
     }
 
-    // Get seller profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('full_name, shop_name, role')
+      .select('full_name, shop_name, role, wallet_address')
       .eq('id', req.user.id)
       .single();
 
     if (profileError) {
       console.error("Profile error:", profileError);
-    }
-
-    if (profile?.role !== 'seller') {
-      return res.status(403).json({ error: "Hanya akun Penjual yang diizinkan menambah produk. Pastikan profil Anda sudah diubah menjadi Penjual." });
     }
 
     const { data, error } = await authSupabase
@@ -129,14 +121,78 @@ export const createProduct = async (req, res) => {
       console.error("Supabase Product Insert Error:", error);
       throw error;
     }
+
+    const product = data[0];
+
+    let nftResult = null;
+    if (isNFTEnabled()) {
+      try {
+        const metadata = {
+          name: product.name,
+          description: product.description || '',
+          image: imageUrl,
+          external_url: `https://karyanusa.com/product/${product.id}`,
+          attributes: [
+            { trait_type: 'Category', value: product.category || 'Other' },
+            { trait_type: 'Price IDR', value: product.price },
+            { trait_type: 'Seller', value: profile?.shop_name || profile?.full_name || 'Seller' },
+            { trait_type: 'Created', value: new Date().toISOString() }
+          ]
+        };
+
+        const metadataBuffer = Buffer.from(JSON.stringify(metadata, null, 2));
+        const metadataPath = `nft-metadata/${product.id}.json`;
+        
+        await authSupabase.storage
+          .from('products')
+          .upload(metadataPath, metadataBuffer, {
+            contentType: 'application/json',
+            upsert: true
+          });
+
+        const { data: { publicUrl: metadataURI } } = authSupabase.storage
+          .from('products')
+          .getPublicUrl(metadataPath);
+
+        const mintToAddress = profile?.wallet_address || process.env.MERCHANT_ETH_ADDRESS;
+        
+        if (mintToAddress) {
+          nftResult = await mintNFT(mintToAddress, metadataURI);
+
+          if (nftResult) {
+            await authSupabase
+              .from('products')
+              .update({
+                token_id: nftResult.tokenId,
+                nft_tx_hash: nftResult.txHash,
+                nft_contract_address: nftResult.contractAddress,
+                metadata_uri: metadataURI
+              })
+              .eq('id', product.id);
+
+            product.token_id = nftResult.tokenId;
+            product.nft_tx_hash = nftResult.txHash;
+            product.nft_contract_address = nftResult.contractAddress;
+            product.metadata_uri = metadataURI;
+          }
+        }
+      } catch (nftError) {
+        console.error('NFT minting failed (non-critical):', nftError.message);
+      }
+    }
     
-    res.status(201).json({ message: "Produk berhasil dibuat", data: data[0] });
+    res.status(201).json({ 
+      message: nftResult 
+        ? "Produk berhasil dibuat & NFT diminting!" 
+        : "Produk berhasil dibuat",
+      data: product,
+      nft: nftResult
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-// 4. Update Product
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -207,13 +263,42 @@ export const updateProduct = async (req, res) => {
   }
 };
 
-// 5. DELETE product
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const authSupabase = getAuthClient(req);
     
-    // Gunakan select untuk memastikan ada produk yang terpengaruh
+    // 1. Cek apakah produk memiliki riwayat pesanan (Order history)
+    // Jika ada pesanan, produk tidak boleh dihapus secara permanen demi integritas data
+    const { data: orders, error: orderError } = await supabaseAdmin
+      .from('order_items')
+      .select('id')
+      .eq('product_id', id)
+      .limit(1);
+
+    if (orderError) throw orderError;
+    if (orders && orders.length > 0) {
+      return res.status(400).json({ 
+        error: "Produk tidak bisa dihapus karena sudah memiliki riwayat pesanan. Silakan ubah stok menjadi 0 jika Anda ingin menghentikan penjualan produk ini." 
+      });
+    }
+
+    // 2. Jika tidak ada pesanan, bersihkan referensi di tabel lain (transient data)
+    // Gunakan supabaseAdmin untuk memastikan kita punya izin menghapus record dari user lain (misal: cart orang lain)
+    
+    // Hapus dari Wishlist
+    await supabaseAdmin.from('wishlist').delete().eq('product_id', id);
+    
+    // Hapus dari Keranjang (Cart)
+    await supabaseAdmin.from('cart').delete().eq('product_id', id);
+    
+    // Hapus Rating/Reviews
+    await supabaseAdmin.from('product_ratings').delete().eq('product_id', id);
+    
+    // Lepaskan tautan di Threads (set null)
+    await supabaseAdmin.from('threads').update({ linked_product_id: null }).eq('linked_product_id', id);
+
+    // 3. Akhirnya hapus produk utama
     const { data, error } = await authSupabase
       .from('products')
       .delete()
@@ -226,20 +311,19 @@ export const deleteProduct = async (req, res) => {
       return res.status(403).json({ error: "Produk tidak ditemukan atau bukan milik Anda" });
     }
     
-    res.json({ message: "Produk berhasil dihapus" });
+    res.json({ message: "Produk berhasil dihapus permanen" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Delete Product Error:", error.message);
+    res.status(500).json({ error: "Gagal menghapus produk: " + error.message });
   }
 };
 
-// 6. Add Rating
 export const addRating = async (req, res) => {
   try {
     const { id: product_id } = req.params;
     const { score, comment } = req.body;
     const authSupabase = getAuthClient(req);
 
-    // Get profile
     const { data: profile } = await authSupabase
       .from('profiles')
       .select('full_name')
@@ -258,7 +342,6 @@ export const addRating = async (req, res) => {
 
     if (ratingError) throw ratingError;
 
-    // Re-calculate avg rating
     const { data: ratings } = await authSupabase
       .from('product_ratings')
       .select('score')

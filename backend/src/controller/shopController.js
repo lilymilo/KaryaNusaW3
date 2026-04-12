@@ -6,51 +6,34 @@ export const getShopDetails = async (req, res) => {
     if (!rawUsername) return res.status(400).json({ error: "Identifier required" });
 
     const identifier = decodeURIComponent(rawUsername).trim();
-
-    // 1. Fetch profile by different possible identifiers (CASE INSENSITIVE where possible)
     let profile = null;
 
-    // A. By Username (Primary)
-    const { data: byUsername } = await supabase
-      .from('profiles')
-      .select('*')
-      .ilike('username', identifier)
-      .maybeSingle();
-    profile = byUsername;
-
-    // B. By Shop Name
-    if (!profile) {
-      const { data: byShopName } = await supabase
-        .from('profiles')
-        .select('*')
-        .ilike('shop_name', identifier)
-        .maybeSingle();
-      profile = byShopName;
-    }
-
-    // C. By Full Name
-    if (!profile) {
-      const { data: byFullName } = await supabase
-        .from('profiles')
-        .select('*')
-        .ilike('full_name', identifier)
-        .maybeSingle();
-      profile = byFullName;
-    }
-
-    // D. By ID (Direct Lookup)
+    // 1. Cek apakah identifier adalah UUID (ID Profil)
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
-    if (!profile && isUuid) {
-      const { data: byId } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', identifier)
-        .maybeSingle();
+    if (isUuid) {
+      const { data: byId } = await supabase.from('profiles').select('*').eq('id', identifier).maybeSingle();
       profile = byId;
     }
 
+    // 2. Cek berdasarkan username
     if (!profile) {
-      console.error(`Profile not found for identifier: "${identifier}"`);
+      const { data: byUsername } = await supabase.from('profiles').select('*').ilike('username', identifier).maybeSingle();
+      profile = byUsername;
+    }
+
+    // 3. Fallback: shop_name atau full_name
+    if (!profile) {
+      const { data: byShopName } = await supabase.from('profiles').select('*').ilike('shop_name', identifier).maybeSingle();
+      profile = byShopName;
+      
+      if (!profile) {
+        const { data: byFullName } = await supabase.from('profiles').select('*').ilike('full_name', identifier).maybeSingle();
+        profile = byFullName;
+      }
+    }
+
+    if (!profile) {
+      console.warn(`Profile not found for identifier: "${identifier}"`);
       return res.status(404).json({ error: `Profil "${identifier}" tidak ditemukan` });
     }
 
@@ -62,11 +45,31 @@ export const getShopDetails = async (req, res) => {
   }
 };
 
+export const searchShops = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+
+    const searchTerm = `%${q}%`;
+    const { data: shops, error } = await supabase
+      .from('profiles')
+      .select('id, username, shop_name, full_name, avatar, shop_logo_url, role')
+      .or(`username.ilike.${searchTerm},shop_name.ilike.${searchTerm},full_name.ilike.${searchTerm}`)
+      .limit(10);
+
+    if (error) throw error;
+    res.json(shops || []);
+  } catch (error) {
+    console.error('searchShops Error:', error);
+    res.status(500).json({ error: 'Gagal mencari toko/kreator' });
+  }
+};
+
 async function fetchProducts(profile, res) {
   try {
     const { data: products, error: productError } = await supabase
       .from('products')
-      .select('*, profiles(shop_name, full_name, avatar)')
+      .select('*, profiles(username, shop_name, full_name, avatar)')
       .eq('seller_id', profile.id)
       .order('created_at', { ascending: false });
 
@@ -77,7 +80,6 @@ async function fetchProducts(profile, res) {
       products: products || []
     });
   } catch (err) {
-    // If fetching products fails (e.g. table doesn't exist yet but unlikely), still return the shop
     res.json({
       shop: profile,
       products: []

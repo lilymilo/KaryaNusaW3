@@ -1,129 +1,229 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../api/axios';
 import { supabase } from '../api/supabaseClient';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 
+const OAUTH_WAIT_MS = 10000;
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const oauthTimerRef = useRef(null);
 
-  // Sync Supabase Auth state with our Context
+  const clearOauthTimer = useCallback(() => {
+    if (oauthTimerRef.current) {
+      clearTimeout(oauthTimerRef.current);
+      oauthTimerRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
-    const syncAuth = async () => {
-      try {
-        // Check if we are in an auth redirect flow (contains access_token in hash)
-        const hasHash = window.location.hash.includes('access_token=');
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          localStorage.setItem('token', session.access_token);
-          try {
-            const { data } = await api.get('/auth/me', {
-              headers: { Authorization: `Bearer ${session.access_token}` }
-            });
-            setUser(data.user);
-            localStorage.setItem('user', JSON.stringify(data.user));
-          } catch (err) {
-            console.error("Failed to sync profile:", err);
-            // Help teammates debug "bouncing" issues or server down issues
-            if (err.response?.status === 401) {
-              toast.error("Sesi tidak valid. Kredensial server & client mungkin berbeda.");
-            } else if (!err.response) {
-              toast.error("Server backend tidak terdeteksi. Pastikan backend sudah dijalankan.");
-            } else {
-              toast.error("Gagal menyinkronkan profil user.");
-            }
-          }
-        } else if (hasHash) {
-          // We have a hash but no session yet, Supabase is likely processing it.
-          console.log("Auth hash detected, waiting for session...");
-          // After 5 seconds, if still no session, stop loading
-          setTimeout(() => setLoading(false), 5000);
-          return; // Don't call setLoading(false) yet
-        }
-      } catch (err) {
-        console.error("Initial auth check failed:", err);
-      } finally {
-        setLoading(false);
+    let cancelled = false;
+
+    const safeSetLoading = (v) => {
+      if (!cancelled) setLoading(v);
+    };
+
+    const stripAuthHash = () => {
+      if (window.location.hash.includes('access_token=')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     };
 
-    syncAuth();
+    const applySessionUser = async (session) => {
+      if (!session) return;
+      localStorage.setItem('token', session.access_token);
+      await fetchUserByToken(session.access_token);
+    };
 
+    const fetchUserByToken = async (token) => {
+      if (!token) return;
+      try {
+        const { data } = await api.get('/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        let currentUser = data.user;
+
+        if (!cancelled) {
+          setUser(currentUser);
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(currentUser));
+        }
+      } catch (err) {
+        console.error('Failed to sync profile:', err);
+        if (err.response?.status === 401) {
+          // Token expired or invalid
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        } else if (!err.response) {
+          toast.error('Server backend tidak terdeteksi.');
+        }
+      }
+    };
+
+    (async () => {
+      safeSetLoading(true);
+      try {
+        const hashHasToken = window.location.hash.includes('access_token=');
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session) {
+          await applySessionUser(session);
+          safeSetLoading(false);
+          return;
+        }
+
+        const localToken = localStorage.getItem('token');
+        if (localToken) {
+          await fetchUserByToken(localToken);
+          safeSetLoading(false);
+          return;
+        }
+
+        if (hashHasToken) {
+          oauthTimerRef.current = setTimeout(() => {
+            oauthTimerRef.current = null;
+            safeSetLoading(false);
+            stripAuthHash();
+            toast.error('Login Google timeout atau gagal. Silakan coba lagi.');
+          }, OAUTH_WAIT_MS);
+          return;
+        }
+
+        safeSetLoading(false);
+      } catch (err) {
+        console.error('Initial auth check failed:', err);
+        safeSetLoading(false);
+      }
+    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth Event:", event);
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+      if (cancelled) return;
+
+      if (event === 'TOKEN_REFRESHED' && session) {
+        clearOauthTimer();
         localStorage.setItem('token', session.access_token);
-        try {
-          const { data } = await api.get('/auth/me', {
-            headers: { Authorization: `Bearer ${session.access_token}` }
-          });
-          
-          let currentUser = data.user;
-          const pendingRole = localStorage.getItem('pending_role');
+        safeSetLoading(false);
+        return;
+      }
 
-          if (pendingRole && currentUser.role !== pendingRole) {
-            console.log("Updating pending role to:", pendingRole);
-            const { data: updatedData } = await api.put('/auth/profile', 
-              { role: pendingRole },
-              { headers: { Authorization: `Bearer ${session.access_token}` } }
-            );
-            currentUser = updatedData.user;
-            localStorage.removeItem('pending_role');
-          }
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+        clearOauthTimer();
+        await applySessionUser(session);
+        stripAuthHash();
+        safeSetLoading(false);
+        return;
+      }
 
-          setUser(currentUser);
-          localStorage.setItem('user', JSON.stringify(currentUser));
-        } catch (err) {
-          console.error("Failed to sync profile:", err);
+      if (event === 'SIGNED_OUT') {
+        clearOauthTimer();
+        const wasSupabaseAuth = !localStorage.getItem('token') || (session === null && event === 'SIGNED_OUT');
+        // Hanya hapus jika memang sedang proses logout
+        if (event === 'SIGNED_OUT') {
+           localStorage.removeItem('token');
+           localStorage.removeItem('user');
+           setUser(null);
         }
-        // Clean up OAuth hash fragment from URL
-        if (window.location.hash.includes('access_token=')) {
-          window.history.replaceState(null, '', window.location.pathname);
-        }
-        setLoading(false);
-      } else if (event === 'SIGNED_OUT') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setUser(null);
-        setLoading(false);
+        safeSetLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      cancelled = true;
+      clearOauthTimer();
+      subscription.unsubscribe();
+    };
+  }, [clearOauthTimer]);
 
-  const login = async (email, password, role = null) => {
-    const { data } = await api.post('/auth/login', { email, password, role });
-    
-    // Simpan token dan user lengkap (yang sudah berisi role dari profil)
+  const login = async (email, password) => {
+    const { data } = await api.post('/auth/login', { email, password });
+
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
+
     setUser(data.user);
     return data;
   };
 
-
-  const loginWithGoogle = async (role = null) => {
+  const loginWithGoogle = async () => {
     try {
-      if (role) {
-        localStorage.setItem('pending_role', role);
-      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/home'
-        }
+          redirectTo: `${window.location.origin}/profile`,
+        },
       });
       if (error) throw error;
     } catch (err) {
-      console.error("Google Login Error:", err);
+      console.error('Google Login Error:', err);
       throw err;
+    }
+  };
+
+  const loginWithWallet = async (walletAddress, signature, message, chain) => {
+    try {
+      const { data } = await api.post('/auth/wallet-login', {
+        walletAddress,
+        signature,
+        message,
+        chain,
+      });
+
+      if (data.token) {
+        try {
+          await supabase.auth.setSession({
+            access_token: data.token,
+            refresh_token: data.refresh_token || data.token,
+          });
+        } catch (sessionErr) {
+          console.warn('setSession fallback:', sessionErr.message);
+          localStorage.setItem('token', data.token);
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+      }
+      return data;
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Login wallet gagal';
+      console.error('Wallet Login Error:', err);
+      throw new Error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const linkWallet = async (walletAddress, signature, message, chain) => {
+    try {
+      const { data } = await api.post('/auth/link-wallet', {
+        walletAddress,
+        signature,
+        message,
+        chain,
+      });
+
+      if (data.user) {
+        updateUserData(data.user);
+      }
+      return data;
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Gagal menghubungkan wallet';
+      console.error('Link Wallet Error:', err);
+      throw new Error(msg);
     }
   };
 
@@ -150,7 +250,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, loginWithGoogle, register, logout, updateUserData, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        loginWithGoogle,
+        loginWithWallet,
+        linkWallet,
+        register,
+        logout,
+        updateUserData,
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

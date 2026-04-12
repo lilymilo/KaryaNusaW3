@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, Store, Phone, Eye, EyeOff, ArrowLeft, MailCheck } from 'lucide-react';
+import { User, Mail, Lock, Store, Phone, Eye, EyeOff, ArrowLeft, MailCheck, Wallet, Loader2, Check } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
+import { useWallet, WALLET_TYPES } from '../context/WalletContext';
+import { MetaMaskIcon } from '../components/icons/WalletIcons';
 import toast from 'react-hot-toast';
 
 const validateWA = (num) => {
@@ -14,12 +16,14 @@ const validateWA = (num) => {
 };
 
 export default function RegisterPage() {
-  const { register, loginWithGoogle } = useAuth();
+  const { register, loginWithGoogle, loginWithWallet } = useAuth();
+  const { connectWallet, signMessage } = useWallet();
   const navigate = useNavigate();
-  const [role, setRole] = useState('buyer'); 
   const [loading, setLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [show, setShow] = useState({ pass: false, conf: false });
+  const [walletLoading, setWalletLoading] = useState(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   const [form, setForm] = useState({
     full_name: '',
@@ -34,9 +38,12 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.password !== form.confirm) return toast.error('Konfirmasi password tidak cocok');
-    if (form.password.length < 6) return toast.error('Password minimal 6 karakter');
     
-    // Validate Phone
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&._-])[A-Za-z\d@$!%*?&._-]{8,}$/;
+    if (!strongPasswordRegex.test(form.password)) {
+      return toast.error('Password lemah! Harus minimal 8 karakter, serta wajib mengandung huruf besar, huruf kecil, angka, dan simbol (misal: @$!._-).', { duration: 5500 });
+    }
+
     const validatedPhone = validateWA(form.phone_number);
     if (!validatedPhone) {
       return toast.error('Nomor WhatsApp tidak valid (Gunakan format 08xx atau +628xx)');
@@ -44,17 +51,52 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const res = await register({ ...form, phone_number: validatedPhone, role });
+      const res = await register({ ...form, phone_number: validatedPhone });
       if (res.needsConfirmation) {
         setIsSuccess(true);
       } else {
         toast.success('Registrasi berhasil!');
-        navigate('/home');
+        navigate('/profile');
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Gagal mendaftar');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const pwd = form.password;
+  const validations = [
+    { label: 'Min. 8 Karakter', valid: pwd.length >= 8 },
+    { label: 'Huruf Besar & Kecil', valid: /(?=.*[a-z])(?=.*[A-Z])/.test(pwd) },
+    { label: 'Ada Angka', valid: /\d/.test(pwd) },
+    { label: 'Ada Simbol (@$!._-)', valid: /[@$!%*?&._-]/.test(pwd) }
+  ];
+
+  const handleWalletRegister = async (type) => {
+    setWalletLoading(type);
+    try {
+      const { address, chain } = await connectWallet(type);
+
+      const timestamp = Date.now();
+      const message = `Daftar di KaryaNusa\n\nWallet: ${address}\nTimestamp: ${timestamp}\nNonce: ${Math.random().toString(36).substring(2)}`;
+
+      const signature = await signMessage(message, type);
+
+      const result = await loginWithWallet(address, signature, message, chain);
+
+      if (result.isNewUser) {
+        toast.success('Akun wallet berhasil dibuat! 🎉');
+      } else {
+        toast.success('Wallet sudah terdaftar, berhasil masuk!');
+      }
+      navigate('/profile');
+    } catch (err) {
+      const body = err.response?.data;
+      const msg = body?.error || err.message || 'Gagal menghubungkan wallet';
+      toast.error(body?.hint ? `${msg} (${body.hint})` : msg);
+    } finally {
+      setWalletLoading(null);
     }
   };
 
@@ -71,16 +113,16 @@ export default function RegisterPage() {
             <span className="text-green-600 dark:text-emerald-400 font-bold">{form.email}</span>. <br/>
             Klik link tersebut untuk mengaktifkan akun Anda.
           </p>
-          
+
           <div className="space-y-4">
-            <a 
+            <a
               href={`https://mail.google.com/mail/u/0/#search/from%3Anoreply%40supabase.io+OR+KaryaNusa`}
               target="_blank" rel="noreferrer"
               className="w-full btn-primary py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2 shadow-sm"
             >
               Buka Kotak Masuk
             </a>
-            <button 
+            <button
               onClick={() => navigate('/login')}
               className="w-full py-4 text-gray-500 dark:text-gray-400 font-bold hover:text-gray-900 dark:hover:text-white transition-colors"
             >
@@ -94,7 +136,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4 py-20 relative overflow-hidden transition-colors duration-300">
-      
+
       <Link to="/" className="absolute top-6 left-6 z-50 flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-green-600 transition-colors font-medium">
         <ArrowLeft size={20} />
         <span className="hidden sm:inline">Kembali</span>
@@ -114,41 +156,20 @@ export default function RegisterPage() {
         </div>
 
         <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative z-10 transition-colors">
-          
+
           <div className="mb-6">
-            <div className="flex bg-gray-50 dark:bg-gray-800 rounded-xl p-1 border border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setRole('buyer')}
-                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                  role === 'buyer' ? 'bg-green-600 dark:bg-emerald-500 text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                <User size={16} /> Pembeli
-              </button>
-              <button
-                onClick={() => setRole('seller')}
-                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                  role === 'seller' ? 'bg-green-600 dark:bg-emerald-500 text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                <Store size={16} /> Penjual
-              </button>
-            </div>
           </div>
 
-          {/* Email Form First */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {role === 'seller' && (
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">NAMA TOKO</label>
-                <div className="relative">
-                  <Store size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type="text" placeholder="Contoh: Toko Berkah" required
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-gray-900 dark:text-white focus:border-green-500 outline-none transition-all text-sm font-medium shadow-sm focus:ring-2 focus:ring-green-500/20"
-                    value={form.shop_name} onChange={e => setForm({...form, shop_name: e.target.value})} />
-                </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">NAMA TOKO</label>
+              <div className="relative">
+                <Store size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="text" placeholder="Contoh: Toko Berkah" required
+                  className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-gray-900 dark:text-white focus:border-green-500 outline-none transition-all text-sm font-medium shadow-sm focus:ring-2 focus:ring-green-500/20"
+                  value={form.shop_name} onChange={e => setForm({...form, shop_name: e.target.value})} />
               </div>
-            )}
+            </div>
 
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">NAMA LENGKAP</label>
@@ -189,7 +210,7 @@ export default function RegisterPage() {
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">PASSWORD</label>
                 <div className="relative">
-                  <input type={show.pass ? 'text' : 'password'} placeholder="******" required
+                  <input type={show.pass ? 'text' : 'password'} placeholder="Min. 8 Karakter Kuat" required
                     className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:border-green-500 outline-none transition-all text-sm font-medium shadow-sm focus:ring-2 focus:ring-green-500/20"
                     value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
                   <button type="button" onClick={() => setShow({...show, pass: !show.pass})} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -200,7 +221,7 @@ export default function RegisterPage() {
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">KONFIRMASI</label>
                 <div className="relative">
-                  <input type={show.conf ? 'text' : 'password'} placeholder="******" required
+                  <input type={show.conf ? 'text' : 'password'} placeholder="Ketik ulang password" required
                     className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:border-green-500 outline-none transition-all text-sm font-medium shadow-sm focus:ring-2 focus:ring-green-500/20"
                     value={form.confirm} onChange={e => setForm({...form, confirm: e.target.value})} />
                   <button type="button" onClick={() => setShow({...show, conf: !show.conf})} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -209,6 +230,17 @@ export default function RegisterPage() {
                 </div>
               </div>
             </div>
+
+            {form.password && (
+              <div className="grid grid-cols-2 gap-2 mt-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                {validations.map((v, i) => (
+                  <div key={i} className={`flex items-center gap-1.5 text-[10px] sm:text-xs font-bold transition-colors ${v.valid ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                    {v.valid ? <Check size={14} /> : <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 ml-1 mr-1" />}
+                    {v.label}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <button type="submit" disabled={loading}
               className="w-full btn-primary py-4 rounded-xl text-white font-bold text-sm shadow-md active:scale-[0.98] transition-all disabled:opacity-50">
@@ -222,7 +254,7 @@ export default function RegisterPage() {
           </div>
 
           <button
-            onClick={() => loginWithGoogle(role)}
+            onClick={() => loginWithGoogle()}
             className="w-full flex items-center justify-center gap-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 py-3.5 rounded-xl text-gray-900 dark:text-white font-bold transition-all shadow-sm active:scale-[0.98]"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -233,6 +265,54 @@ export default function RegisterPage() {
             </svg>
             Lanjut dengan Google
           </button>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700"></div></div>
+            <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest text-gray-500 dark:text-gray-400">
+              <span className="px-3 bg-white dark:bg-gray-900 font-black flex items-center gap-1.5">
+                <Wallet size={12} /> Atau via Wallet
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {!showWalletModal ? (
+              <button
+                type="button"
+                onClick={() => setShowWalletModal(true)}
+                className="w-full flex items-center justify-center gap-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 py-4 px-6 rounded-2xl text-gray-900 dark:text-white font-black transition-all active:scale-[0.98] hover:shadow-md"
+              >
+                <Wallet size={20} className="text-gray-600 dark:text-gray-300" />
+                <span>Pilih Penyedia Wallet</span>
+              </button>
+            ) : (
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3 shadow-inner">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Pilih Web3 Wallet</span>
+                  <button onClick={() => setShowWalletModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <ArrowLeft size={16} />
+                  </button>
+                </div>
+                <button
+                  id="register-metamask-btn"
+                  onClick={() => handleWalletRegister(WALLET_TYPES.METAMASK)}
+                  disabled={walletLoading !== null}
+                  className="w-full flex items-center justify-center gap-4 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 hover:from-orange-100 hover:to-amber-100 dark:hover:from-orange-900/40 dark:hover:to-amber-900/40 border border-orange-200 dark:border-orange-800/50 py-3.5 px-6 rounded-xl text-gray-900 dark:text-white font-black transition-all active:scale-[0.98] group disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {walletLoading === WALLET_TYPES.METAMASK ? (
+                    <Loader2 size={22} className="animate-spin text-orange-500" />
+                  ) : (
+                    <div className="group-hover:scale-110 transition-transform">
+                      <MetaMaskIcon />
+                    </div>
+                  )}
+                  <span className="text-sm">{walletLoading === WALLET_TYPES.METAMASK ? 'Menghubungkan...' : 'Daftar via MetaMask'}</span>
+                  <span className="ml-auto text-[10px] uppercase tracking-wider font-bold text-orange-500/70 dark:text-orange-400/70">EVM</span>
+                </button>
+
+              </div>
+            )}
+          </div>
 
           <p className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 mt-8">
             Sudah punya akun? <Link to="/login" className="text-green-600 dark:text-emerald-400 font-bold hover:underline transition-colors">Masuk</Link>

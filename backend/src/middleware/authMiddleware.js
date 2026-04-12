@@ -31,23 +31,18 @@ export const protect = async (req, res, next) => {
   }
 };
 
-export const sellerOnly = async (req, res, next) => {
+export const optionalProtect = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return next();
+
   try {
-    // req.user is set by protect middleware
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', req.user.id)
-      .single();
-
-    if (profileError || profile.role !== 'seller') {
-      return res.status(403).json({ 
-        error: 'Akses dilarang! Hanya akun dengan role Seller yang bisa melakukan aksi ini.' 
-      });
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (!error && user) {
+      req.user = user;
     }
-
-    next();
   } catch (err) {
-    res.status(500).json({ error: 'Gagal memverifikasi role user.' });
   }
+  next();
 };

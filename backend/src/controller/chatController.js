@@ -1,6 +1,5 @@
-import { getAuthClient, supabase } from '../config/supabaseClient.js';
+import { getAuthClient, supabase, supabaseAdmin } from '../config/supabaseClient.js';
 
-// 1. Get Conversation History
 export const getMessages = async (req, res) => {
   try {
     const { otherUserId } = req.params;
@@ -19,13 +18,11 @@ export const getMessages = async (req, res) => {
   }
 };
 
-// 2. Get All Conversations (List of people user has chatted with)
 export const getConversations = async (req, res) => {
   try {
     const userId = req.user.id;
     const authSupabase = getAuthClient(req);
 
-    // Fetch all messages involving the user
     const { data: messages, error } = await authSupabase
       .from('messages')
       .select('*, sender:sender_id(id, full_name, avatar, shop_name, username), receiver:receiver_id(id, full_name, avatar, shop_name, username)')
@@ -34,7 +31,6 @@ export const getConversations = async (req, res) => {
 
     if (error) throw error;
 
-    // Group by conversation partner
     const conversationsMap = new Map();
     messages.forEach(msg => {
       const otherUser = msg.sender_id === userId ? msg.receiver : msg.sender;
@@ -60,7 +56,6 @@ export const getConversations = async (req, res) => {
   }
 };
 
-// 3. Send Message
 export const sendMessage = async (req, res) => {
   try {
     const { receiver_id, content, attachment_url, attachment_type } = req.body;
@@ -85,7 +80,6 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// 4. Get Partner Profile (Robust lookup for chat)
 export const getPartnerProfile = async (req, res) => {
   try {
     const { identifier } = req.params;
@@ -93,27 +87,78 @@ export const getPartnerProfile = async (req, res) => {
 
     const handle = decodeURIComponent(identifier).trim();
 
-    // A. Try finding by ID first (most stable)
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(handle);
     if (isUuid) {
       const { data: byId } = await supabase.from('profiles').select('*').eq('id', handle).maybeSingle();
       if (byId) return res.json(byId);
     }
 
-    // B. fallback 1: Username
     const { data: byUsername } = await supabase.from('profiles').select('*').ilike('username', handle).maybeSingle();
     if (byUsername) return res.json(byUsername);
 
-    // C. fallback 2: Shop Name
     const { data: byShopName } = await supabase.from('profiles').select('*').ilike('shop_name', handle).maybeSingle();
     if (byShopName) return res.json(byShopName);
 
-    // D. fallback 3: Full Name
     const { data: byFullName } = await supabase.from('profiles').select('*').ilike('full_name', handle).maybeSingle();
     if (byFullName) return res.json(byFullName);
 
     return res.status(404).json({ error: "Profil tidak ditemukan" });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const getUnreadCount = async (req, res) => {
+  try {
+    const authSupabase = getAuthClient(req);
+    const { count, error } = await authSupabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', req.user.id)
+      .eq('is_read', false);
+
+    if (error) throw error;
+    res.json({ unreadCount: count || 0 });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const markAsRead = async (req, res) => {
+  try {
+    const { otherUserId } = req.params;
+    const authSupabase = getAuthClient(req);
+
+    const { error } = await authSupabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('receiver_id', req.user.id)
+      .eq('sender_id', otherUserId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const searchUsers = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+
+    const searchTerm = `%${q}%`;
+    const { data: users, error } = await supabase
+      .from('profiles')
+      .select('id, username, shop_name, full_name, avatar, shop_logo_url')
+      .or(`username.ilike.${searchTerm},shop_name.ilike.${searchTerm},full_name.ilike.${searchTerm}`)
+      .neq('id', req.user.id)
+      .limit(10);
+
+    if (error) throw error;
+    res.json(users || []);
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal mencari pengguna' });
   }
 };

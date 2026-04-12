@@ -1,16 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { 
   User, Store, Settings, Heart, Package, 
   TrendingUp, Home, Camera, Check, Save, 
-  Trash2, Edit, Plus, ExternalLink, ShoppingBag, ArrowLeft
+  Trash2, Edit, Plus, ExternalLink, ShoppingBag, ArrowLeft,
+  Wallet, Landmark, History, Link, RefreshCw, AlertTriangle, Eye, EyeOff, Send
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useWallet, WALLET_TYPES } from '../context/WalletContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Navbar';
+import ThemeToggle from '../components/ThemeToggle';
 import CartDrawer from '../components/CartDrawer';
 import ProductCard from '../components/ProductCard';
+import FollowListModal from '../components/FollowListModal';
+
+const ProductModal = lazy(() => import('../components/ProductModal'));
 
 const validateWA = (num) => {
   if (!num) return null;
@@ -23,15 +29,23 @@ const validateWA = (num) => {
 const formatPrice = (p) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p);
 
 export default function ProfilePage() {
-  const { user, updateUserData } = useAuth();
+  const { user, updateUserData, linkWallet } = useAuth();
+  const { connectWallet, walletAddress, signMessage, disconnectWallet } = useWallet();
   const [activeTab, setActiveTab] = useState('akun');
   const [loading, setLoading] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Forms State
+  useEffect(() => {
+    if (location.state?.requireSetup) {
+      toast.error('Gagal mengakses fitur! Mohon lengkapi Username dan Nama Toko Anda terlebih dahulu.', { duration: 4500 });
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     username: user?.username || '',
@@ -42,30 +56,73 @@ export default function ProfilePage() {
     shop_contact: user?.shop_contact || ''
   });
 
-  // Assets State (Files)
   const [files, setFiles] = useState({
     avatar: null,
     shop_logo: null,
     shop_banner: null
   });
 
-  // Previews
   const [previews, setPreviews] = useState({
     avatar: user?.avatar,
     shop_logo: user?.shop_logo_url,
     shop_banner: user?.shop_banner_url
   });
 
-  // Data fetching (Wishlist, Products, Stats)
+  const [passwordForm, setPasswordForm] = useState({
+    new_password: '',
+    confirm_password: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [showConf, setShowConf] = useState(false);
+
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      return toast.error('Konfirmasi password tidak cocok');
+    }
+    
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&._-])[A-Za-z\d@$!%*?&._-]{8,}$/;
+    if (!strongPasswordRegex.test(passwordForm.new_password)) {
+      return toast.error('Password lemah! Harus minimal 8 karakter, serta wajib mengandung huruf besar, huruf kecil, angka, dan simbol khusus (@$!%*?&._-).', { duration: 5500 });
+    }
+    setPasswordLoading(true);
+    try {
+      const { data } = await api.put('/auth/set-password', { newPassword: passwordForm.new_password });
+      toast.success(data.message || 'Password berhasil disimpan');
+      setPasswordForm({ new_password: '', confirm_password: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Gagal menyimpan password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const pwd = passwordForm.new_password;
+  const validations = [
+    { label: 'Min. 8 Karakter', valid: pwd.length >= 8 },
+    { label: 'Huruf Besar & Kecil', valid: /(?=.*[a-z])(?=.*[A-Z])/.test(pwd) },
+    { label: 'Ada Angka', valid: /\d/.test(pwd) },
+    { label: 'Ada Simbol (@$!._-)', valid: /[@$!%*?&._-]/.test(pwd) }
+  ];
+
   const [wishlist, setWishlist] = useState([]);
   const [myProducts, setMyProducts] = useState([]);
   const [stats, setStats] = useState(null);
+  const [payouts, setPayouts] = useState([]);
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [socialStats, setSocialStats] = useState({ followers: 0, following: 0 });
+  const [modalType, setModalType] = useState(null);
 
   useEffect(() => {
     if (activeTab === 'wishlist') fetchWishlist();
     if (activeTab === 'produk') fetchMyProducts();
     if (activeTab === 'statistik') fetchStats();
-  }, [activeTab]);
+    if (activeTab === 'dompet') fetchPayouts();
+    fetchSocialStats();
+  }, [activeTab, user?.id]);
 
   const fetchWishlist = async () => {
     try {
@@ -77,7 +134,6 @@ export default function ProfilePage() {
   const fetchMyProducts = async () => {
     try {
       const { data } = await api.get('/products');
-      // Filter products by seller_id (this client-side filter is a backup, backend should ideally have a /my route)
       setMyProducts(data.filter(p => p.seller_id === user.id));
     } catch (err) { console.error(err); }
   };
@@ -89,6 +145,87 @@ export default function ProfilePage() {
     } catch (err) { console.error(err); }
   };
 
+  const fetchPayouts = async () => {
+    try {
+      const { data } = await api.get('/orders/payout/history');
+      setPayouts(data);
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchSocialStats = async () => {
+    if (!user?.id) return;
+    try {
+      const { data } = await api.get(`/social/stats/${user.id}`);
+      setSocialStats(data);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleLinkWallet = async (type) => {
+    setLinkLoading(true);
+    try {
+      const { address, chain } = await connectWallet(type);
+      const message = `KaryaNusa: Hubungkan wallet ke akun Anda (${user.id})`;
+      const signature = await signMessage(message, type);
+      
+      const res = await linkWallet(address, signature, message, chain);
+      toast.success(res.message || 'Wallet berhasil dihubungkan!');
+    } catch (err) {
+      toast.error(err.message || 'Gagal menghubungkan wallet');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleWithdraw = async (e) => {
+    e.preventDefault();
+    if (!user.wallet_address) return toast.error('Hubungkan wallet terlebih dahulu');
+    
+    const amount = Number(e.target.amount.value);
+    if (!amount || amount < 10000) return toast.error('Minimal penarikan Rp 10.000');
+    if (amount > user.balance) return toast.error('Saldo tidak mencukupi');
+
+    setPayoutLoading(true);
+    try {
+      const { data } = await api.post('/orders/payout', {
+        amount,
+        wallet_address: user.wallet_address,
+        chain: 'evm'
+      });
+      toast.success(data.message || 'Permintaan penarikan berhasil dikirim!');
+      updateUserData({ ...user, balance: user.balance - amount });
+      fetchPayouts();
+      e.target.reset();
+    } catch (err) {
+      console.error('Withdrawal error:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Gagal memproses penarikan';
+      toast.error(errorMessage);
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
+  const handleTransfer = async (e) => {
+    e.preventDefault();
+    const recipient = e.target.recipient.value.trim();
+    const amount = Number(e.target.amount.value);
+    
+    if (!recipient) return toast.error('Username tujuan wajib diisi');
+    if (amount < 1000) return toast.error('Minimal transfer Rp 1.000');
+    if (amount > (user?.balance || 0)) return toast.error('Saldo tidak mencukupi');
+
+    setTransferLoading(true);
+    try {
+      const { data } = await api.post('/orders/transfer', { recipientUsername: recipient, amount });
+      toast.success(data.message);
+      updateUserData({ ...user, balance: user.balance - amount });
+      fetchPayouts(); // Refresh history
+      e.target.reset();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Gagal mengirim saldo');
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
   const handleDeleteProduct = async () => {
     if (!productToDelete) return;
     try {
@@ -97,6 +234,7 @@ export default function ProfilePage() {
       setMyProducts(prev => prev.filter(p => p.id !== productToDelete.id));
       setProductToDelete(null);
     } catch (err) {
+      console.error(err);
       toast.error('Gagal menghapus produk');
     }
   };
@@ -112,7 +250,6 @@ export default function ProfilePage() {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     
-    // Validate Phone
     const validatedPhone = validateWA(formData.phone_number);
     if (formData.phone_number && !validatedPhone) {
       return toast.error('Nomor WhatsApp tidak valid (Gunakan format 08xx atau +628xx)');
@@ -150,20 +287,15 @@ export default function ProfilePage() {
       <Navbar onCartOpen={() => setCartOpen(true)} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
 
-      {/* Header Profile */}
       <div className="pt-20 bg-gradient-to-b from-green-50 to-gray-50 dark:from-green-900/10 dark:to-gray-950 border-b border-gray-200 dark:border-gray-800 transition-colors">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
-           <button 
-             onClick={() => navigate(-1)}
-             className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl text-gray-500 hover:text-gray-900 transition-all mb-4 font-medium"
-           >
-             <ArrowLeft size={18} /> Kembali
-           </button>
-        </div>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center gap-6 pb-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center gap-5 py-8 pb-10">
           <div className="relative group">
-            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-gray-800 shadow-xl bg-white dark:bg-gray-800">
-              <img src={previews.avatar || 'https://via.placeholder.com/150'} alt="Profile" className="w-full h-full object-cover" />
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white dark:border-gray-800 shadow-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              {previews.avatar ? (
+                <img src={previews.avatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User size={48} className="text-gray-400 dark:text-gray-500" />
+              )}
             </div>
             <label className="absolute bottom-1 right-1 p-2 bg-green-600 rounded-full text-white cursor-pointer hover:bg-green-700 transition-colors shadow-lg border-2 border-white dark:border-gray-800">
               <Camera size={18} />
@@ -171,11 +303,25 @@ export default function ProfilePage() {
             </label>
           </div>
           <div className="text-center md:text-left">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{user?.full_name}</h1>
-            <p className="text-gray-500 mb-3 font-medium">@{user?.username || 'user'} · {user?.role === 'seller' ? 'Penjual' : 'Pembeli'}</p>
-            <div className="flex flex-wrap justify-center md:justify-start gap-2">
-              <span className="px-3 py-1 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-full text-xs font-bold text-green-600 dark:text-emerald-400">{user?.email}</span>
-              {user?.phone_number && <span className="px-3 py-1 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-full text-xs font-bold text-green-600 dark:text-emerald-400">{user.phone_number}</span>}
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{user?.full_name}</h1>
+            <p className="text-gray-500 text-sm font-medium mb-3">@{user?.username || 'user'}</p>
+            
+            <div className="flex items-center justify-center md:justify-start gap-4">
+              <button 
+                onClick={() => setModalType('followers')}
+                className="flex items-center gap-1.5 hover:text-green-600 transition-colors"
+              >
+                <span className="font-bold text-gray-900 dark:text-white">{socialStats.followers}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Pengikut</span>
+              </button>
+              <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
+              <button 
+                onClick={() => setModalType('following')}
+                className="flex items-center gap-1.5 hover:text-green-600 transition-colors"
+              >
+                <span className="font-bold text-gray-900 dark:text-white">{socialStats.following}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Mengikuti</span>
+              </button>
             </div>
           </div>
         </div>
@@ -183,51 +329,70 @@ export default function ProfilePage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Tabs */}
-          <div className="w-full lg:w-64 flex-shrink-0">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-2 sticky top-24 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible scrollbar-hide border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
+          <div className="w-full lg:w-64 flex-shrink-0 z-20 sticky top-16 lg:top-24">
+            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible scrollbar-hide border border-gray-200 dark:border-gray-700 shadow-sm transition-colors scroll-smooth snap-x snap-mandatory">
               <button 
                 onClick={() => setActiveTab('akun')}
                 className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'akun' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
                 <User size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Akun</span>
               </button>
               
-              {user?.role === 'seller' && (
-                <button 
-                  onClick={() => setActiveTab('toko')}
-                  className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'toko' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                  <Home size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Toko</span>
-                </button>
-              )}
+              <button 
+                onClick={() => setActiveTab('toko')}
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'toko' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <Home size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Toko</span>
+              </button>
 
-              {user?.role === 'buyer' && (
-                <button 
-                  onClick={() => setActiveTab('wishlist')}
-                  className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'wishlist' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                  <Heart size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Wishlist</span>
-                </button>
-              )}
+              <button 
+                onClick={() => setActiveTab('wishlist')}
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'wishlist' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <Heart size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Wishlist</span>
+              </button>
 
-              {user?.role === 'seller' && (
-                <>
-                  <button 
-                    onClick={() => setActiveTab('produk')}
-                    className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'produk' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                    <Package size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Produk</span>
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('statistik')}
-                    className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'statistik' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                    <TrendingUp size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Statistik</span>
-                  </button>
-                </>
-              )}
+              <button 
+                onClick={() => setActiveTab('produk')}
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'produk' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <Package size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Produk</span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('statistik')}
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'statistik' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <TrendingUp size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Statistik</span>
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('dompet')}
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'dompet' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <Wallet size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Saldo & Dompet</span>
+              </button>
+
+              <div className="w-px lg:w-full h-8 lg:h-px bg-gray-200 dark:bg-gray-700 my-1 lg:my-2 mx-2 lg:mx-0 shrinks-0"></div>
+
+              <button 
+                onClick={() => navigate(`/shop/${user?.username || user?.id}`)}
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700`}>
+                <ExternalLink size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Lihat Profil Saya</span>
+              </button>
             </div>
           </div>
 
-          {/* Main Content Areas */}
           <div className="flex-1 min-w-0">
-            {/* 1. AKUN SECTION */}
+            
+            {(!user?.username || !user?.shop_name) && (
+              <div className="mb-6 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/50 rounded-2xl p-4 sm:p-5 flex items-start gap-4 animate-in fade-in zoom-in duration-500 shadow-sm">
+                <div className="bg-orange-100 dark:bg-orange-900/50 p-2 rounded-xl text-orange-600 dark:text-orange-400 shrink-0">
+                  <AlertTriangle size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-orange-900 dark:text-orange-300 mb-1 text-sm sm:text-base">Akun Anda Belum Sepenuhnya Lengkap!</h3>
+                  <p className="text-orange-700 dark:text-orange-400/80 text-xs sm:text-sm font-medium leading-relaxed">
+                    Demi keamanan dan kenyamanan transaksi, mohon lengkapi <span className="font-bold underline">Username</span> pada tab <span className="font-bold">Data Pribadi</span> dan <span className="font-bold underline">Nama Toko</span> pada tab <span className="font-bold">Pengaturan Toko</span> sekarang juga.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'akun' && (
               <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
@@ -260,10 +425,69 @@ export default function ProfilePage() {
                     {loading ? 'Menyimpan...' : <><Save size={18} /> Simpan Perubahan</>}
                   </button>
                 </form>
+
+                <div className="mt-10 border-t border-gray-200 dark:border-gray-700 pt-8 mt-8">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <User className="text-green-600" /> Pengaturan Password
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-6">Atur password (Min. 8 karakter, Kombinasi Huruf Besar, Huruf Kecil, Angka & Simbol) untuk login manual dengan Alamat Wallet / Username Anda tanpa perlu koneksi MetaMask.</p>
+                  
+                  <form onSubmit={handleUpdatePassword} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Password Baru</label>
+                        <div className="relative">
+                          <input type={showPass ? "text" : "password"} value={passwordForm.new_password} onChange={e => setPasswordForm({...passwordForm, new_password: e.target.value})} placeholder="Kombinasi Karakter Kuat"
+                            className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 pr-12 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
+                          <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Konfirmasi Password</label>
+                        <div className="relative">
+                          <input type={showConf ? "text" : "password"} value={passwordForm.confirm_password} onChange={e => setPasswordForm({...passwordForm, confirm_password: e.target.value})} placeholder="Ketik ulang password"
+                            className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 pr-12 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
+                          <button type="button" onClick={() => setShowConf(!showConf)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            {showConf ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {passwordForm.new_password && (
+                      <div className="grid grid-cols-2 gap-2 mt-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                        {validations.map((v, i) => (
+                          <div key={i} className={`flex items-center gap-1.5 text-[10px] sm:text-xs font-bold transition-colors ${v.valid ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                            {v.valid ? <Check size={14} /> : <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 ml-1 mr-1" />}
+                            {v.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button type="submit" disabled={passwordLoading} className="btn-primary w-full sm:w-auto px-8 py-3 rounded-xl text-white font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-sm">
+                      {passwordLoading ? 'Menyimpan...' : <><Check size={18} /> Simpan Password</>}
+                    </button>
+                  </form>
+                </div>
+
+                <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-8">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Settings className="text-green-600" /> Preferensi Tampilan
+                  </h3>
+                  <div className="flex items-center justify-between p-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
+                    <div className="space-y-1">
+                      <p className="font-bold text-gray-900 dark:text-white text-sm">Mode Aplikasi</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium tracking-wide">Pilih antara mode terang atau gelap untuk kenyamanan mata Anda.</p>
+                    </div>
+                    <ThemeToggle />
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* 2. TOKO SECTION (Seller only) */}
             {activeTab === 'toko' && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="bg-white dark:bg-gray-900 shadow-sm rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700 transition-colors">
@@ -272,7 +496,6 @@ export default function ProfilePage() {
                   </h2>
                   <form onSubmit={handleUpdateProfile} className="space-y-6">
                     <div className="space-y-4">
-                      {/* Banner Upload */}
                       <div className="relative h-40 w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 group transition-colors">
                         <img src={previews.shop_banner || 'https://via.placeholder.com/1200x400'} className="w-full h-full object-cover" />
                         <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white font-medium">
@@ -282,13 +505,10 @@ export default function ProfilePage() {
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-6">
-                        {/* Logo Upload */}
                         <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-4 border-white dark:border-gray-800 shadow-md flex-shrink-0 group">
-                          <img src={previews.shop_logo || 'https://via.placeholder.com/200'} className="w-full h-full object-cover bg-white dark:bg-gray-800" />
-                          <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                            <Camera size={24} className="text-white" />
-                            <input type="file" className="hidden" onChange={(e) => handleFileChange(e, 'shop_logo')} accept="image/*" />
-                          </label>
+                          <img src={previews.avatar || 'https://via.placeholder.com/200'} className="w-full h-full object-cover bg-white dark:bg-gray-800" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-transparent group-hover:bg-black/10 transition-colors pointer-events-none">
+                          </div>
                         </div>
                         
                         <div className="flex-1 space-y-4">
@@ -326,7 +546,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* 3. WISHLIST SECTION (Buyer only) */}
             {activeTab === 'wishlist' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center justify-between mb-6">
@@ -340,16 +559,41 @@ export default function ProfilePage() {
                     <p className="text-gray-500 dark:text-gray-400 font-medium mb-4">Belum ada wishlist. Ayo cari produk favoritmu!</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {wishlist.map(item => (
-                      <ProductCard key={item.id} product={item.products} initialWishlisted={true} />
-                    ))}
-                  </div>
+                <div className="space-y-3">
+                  {wishlist.filter(item => item.products).map(item => (
+                    <div key={item.id} 
+                      onClick={() => navigate(`/product/${item.products.id}`)}
+                      className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 flex items-center gap-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-green-300 dark:hover:border-emerald-500 transition-all group">
+                      <img src={item.products.image} className="w-16 h-16 rounded-lg object-cover border border-gray-100 dark:border-gray-800 group-hover:scale-105 transition-transform" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 dark:text-white truncate text-sm sm:text-base">{item.products.name}</h4>
+                        <p className="text-green-600 dark:text-emerald-400 font-bold text-sm">{formatPrice(item.products.price)}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">🛒 {item.products.profiles?.shop_name || item.products.profiles?.full_name || 'Penjual'}</p>
+                      </div>
+                      <div className="flex gap-2">
+                         <button 
+                           onClick={async (e) => { 
+                             e.stopPropagation(); 
+                             try {
+                               await api.post('/wishlist/toggle', { productId: item.products.id });
+                               fetchWishlist();
+                               toast.success('Dihapus dari wishlist');
+                             } catch (err) {
+                               toast.error('Gagal menghapus');
+                             }
+                           }} 
+                           className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                         >
+                           <Heart size={20} fill="currentColor" />
+                         </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 )}
               </div>
             )}
 
-            {/* 4. PRODUK SECTION (Seller only) */}
             {activeTab === 'produk' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center justify-between mb-6">
@@ -366,39 +610,46 @@ export default function ProfilePage() {
                     <p className="text-gray-500 dark:text-gray-400 font-medium">Anda belum memiliki produk.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {selected && (
-                      <ProductModal 
-                        product={selected} 
-                        onClose={() => setSelected(null)} 
-                      />
-                    )}
-                    {myProducts.map(p => (
-                      <div key={p.id} 
-                        onClick={() => setSelected(p)}
-                        className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-4 flex items-center gap-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-green-300 dark:hover:border-emerald-500 transition-colors group">
-                        <img src={p.image} className="w-16 h-16 rounded-xl object-cover border border-gray-100 dark:border-gray-800 group-hover:scale-105 transition-transform" />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-gray-900 dark:text-white truncate">{p.name}</h4>
-                          <p className="text-green-600 dark:text-emerald-400 font-bold">{formatPrice(p.price)}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Stok: {p.stock} · Terjual: {p.sold}</p>
+                <div className="space-y-3">
+                  {selected && (
+                    <Suspense fallback={null}>
+                      <ProductModal product={selected} onClose={() => setSelected(null)} />
+                    </Suspense>
+                  )}
+                  {myProducts.map(p => (
+                    <div key={p.id} 
+                      onClick={() => setSelected(p)}
+                      className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 flex items-center gap-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-green-300 dark:hover:border-emerald-500 transition-all group">
+                      <img src={p.image} className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border border-gray-100 dark:border-gray-800 group-hover:scale-105 transition-transform" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-1">
+                          <h4 className="font-bold text-gray-900 dark:text-white truncate text-sm sm:text-lg">{p.name}</h4>
+                          <span className="hidden sm:inline px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-bold text-gray-500 uppercase tracking-wider">{p.is_nft ? 'NFT' : 'Physical'}</span>
                         </div>
-                        <div className="flex gap-2">
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/edit-product/${p.id}`); }} className="p-2 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-emerald-400 hover:bg-green-50 dark:hover:bg-green-900/30 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors">
-                            <Edit size={18} />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); setProductToDelete(p); }} className="p-2 bg-gray-50 dark:bg-gray-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors">
-                            <Trash2 size={18} />
-                          </button>
+                        <div className="flex items-center gap-3">
+                          <p className="text-green-600 dark:text-emerald-400 font-bold text-sm sm:text-base">{formatPrice(p.price)}</p>
+                          <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded-md">
+                            <span>📦 Stok: <b>{p.stock}</b></span>
+                            <span className="w-px h-2 bg-gray-300 dark:bg-gray-700"></span>
+                            <span>📈 Terjual: <b>{p.sold}</b></span>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                      <div className="flex gap-1 sm:gap-2">
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/edit-product/${p.id}`); }} className="p-2 sm:p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-emerald-400 hover:bg-green-50 dark:hover:bg-green-900/30 border border-gray-200 dark:border-gray-700 rounded-xl transition-all shadow-sm">
+                          <Edit size={18} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setProductToDelete(p); }} className="p-2 sm:p-2.5 bg-gray-50 dark:bg-gray-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-700 rounded-xl transition-all shadow-sm">
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 )}
               </div>
             )}
 
-            {/* 5. STATISTIK SECTION (Seller only) */}
             {activeTab === 'statistik' && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
@@ -451,6 +702,173 @@ export default function ProfilePage() {
                 )}
               </div>
             )}
+
+            {activeTab === 'dompet' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                      <p className="text-green-100 text-xs font-bold mb-1 uppercase tracking-wider">Saldo Tersedia</p>
+                      <h3 className="text-4xl font-black mb-1">{formatPrice(user?.balance || 0)}</h3>
+                      <div className="mt-4 flex items-center gap-2">
+                        <div className="bg-white/20 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-2">
+                           <p className="text-[10px] font-bold text-green-50 uppercase">Status Dompet</p>
+                           {user?.wallet_address ? (
+                              <Check size={14} className="text-green-300" />
+                            ) : (
+                              <RefreshCw size={12} className="animate-spin text-green-200" />
+                            )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      {!user?.wallet_address && (
+                        <button onClick={() => { 
+                          const el = document.getElementById('link-wallet-section');
+                          el?.scrollIntoView({ behavior: 'smooth' });
+                        }} className="bg-white text-green-700 px-6 py-3 rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all flex items-center gap-2">
+                          <Link size={16} /> Hubungkan Wallet
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+                  <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-green-400/20 rounded-full blur-2xl"></div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                  <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
+                    <form onSubmit={handleTransfer}>
+                      <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                        <Send size={20} className="text-blue-500" /> Kirim Saldo
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Username Penerima</label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-3.5 text-gray-400 font-bold">@</span>
+                            <input 
+                              type="text" 
+                              name="recipient"
+                              placeholder="username_tujuan"
+                              className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-4 py-3 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 font-bold" />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nominal (IDR)</label>
+                          <input 
+                            type="number" 
+                            name="amount"
+                            placeholder="Min. Rp 1.000"
+                            min={1000}
+                            className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 font-bold" />
+                        </div>
+                        <button 
+                          disabled={transferLoading || (user?.balance || 0) < 1000}
+                          className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold shadow-md hover:bg-blue-700 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                          {transferLoading ? <><RefreshCw size={16} className="animate-spin" /> Memproses...</> : <><Send size={16} /> Kirim Sekarang</>}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  <div id="link-wallet-section" className="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors md:col-span-2 lg:col-span-1">
+                    {!user?.wallet_address ? (
+                      <div className="text-center h-full flex flex-col justify-center">
+                        <Link size={40} className="mx-auto text-gray-300 mb-4" />
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Hubungkan Wallet</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">Anda perlu menghubungkan wallet untuk menarik saldo penghasilan.</p>
+                        <div className="space-y-3">
+                          <button 
+                            disabled={linkLoading}
+                            onClick={() => handleLinkWallet(WALLET_TYPES.METAMASK)}
+                            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-bold text-gray-700 dark:text-gray-200">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="" className="w-6 h-6" />
+                            MetaMask
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleWithdraw}>
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                          <Landmark size={20} className="text-green-600" /> Tarik Saldo
+                        </h4>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Alamat Tujuan</label>
+                            <div className="bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-3 font-mono text-xs break-all text-gray-600 dark:text-gray-400 font-bold">
+                              {user.wallet_address}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nominal Penarikan (IDR)</label>
+                            <input 
+                              type="number" 
+                              name="amount"
+                              placeholder="Min. Rp 10.000"
+                              min={10000}
+                              max={user.balance}
+                              className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:ring-1 focus:ring-green-500 font-bold" />
+                          </div>
+                          <button 
+                            disabled={payoutLoading || (user?.balance || 0) < 10000}
+                            className="btn-primary w-full py-3 rounded-xl text-white font-bold shadow-md hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all">
+                            {payoutLoading ? 'Memproses...' : 'Tarik Sekarang'}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                    <History size={20} className="text-green-600" /> Riwayat Pencairan
+                  </h3>
+                  {payouts.length === 0 ? (
+                    <div className="text-center py-12">
+                      <History size={48} className="mx-auto text-gray-200 mb-2" />
+                      <p className="text-gray-500 dark:text-gray-400 font-medium">Belum ada riwayat penarikan.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-left border-b border-gray-100 dark:border-gray-800">
+                            <th className="pb-4 font-bold text-xs text-gray-400 uppercase tracking-widest">Tanggal</th>
+                            <th className="pb-4 font-bold text-xs text-gray-400 uppercase tracking-widest text-right">Jumlah</th>
+                            <th className="pb-4 font-bold text-xs text-gray-400 uppercase tracking-widest text-center">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                          {payouts.map((p) => (
+                            <tr key={p.id} className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                              <td className="py-4">
+                                <p className="text-sm font-bold text-gray-900 dark:text-white">{new Date(p.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                <p className="text-[10px] font-mono text-gray-500 truncate w-32">{p.tx_hash || 'TX pending'}</p>
+                              </td>
+                              <td className="py-4 text-right">
+                                <p className="text-sm font-black text-gray-900 dark:text-white">{formatPrice(p.amount)}</p>
+                              </td>
+                              <td className="py-4 text-center">
+                                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                  p.status === 'completed' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-emerald-400' :
+                                  p.status === 'pending' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
+                                  'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                }`}>
+                                  {p.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -482,6 +900,13 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+      <FollowListModal 
+        isOpen={!!modalType}
+        onClose={() => setModalType(null)}
+        userId={user?.id}
+        type={modalType}
+        title={modalType === 'followers' ? 'Pengikut' : 'Mengikuti'}
+      />
     </div>
   );
 }

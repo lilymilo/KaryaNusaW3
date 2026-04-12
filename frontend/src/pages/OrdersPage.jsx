@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Star, ArrowLeft, CheckCircle, Clock } from 'lucide-react';
+import { Package, Star, ArrowLeft, CheckCircle, Clock, MapPin, RefreshCw } from 'lucide-react';
+import { formatPrice, formatDate } from '../utils/format';
 import api from '../api/axios';
 import Navbar from '../components/Navbar';
 import CartDrawer from '../components/CartDrawer';
 import toast from 'react-hot-toast';
-
-const formatPrice = (p) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p);
-const formatDate = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
 function RatingModal({ item, orderId, onClose, onSuccess }) {
   const [score, setScore] = useState(5);
@@ -86,15 +84,9 @@ export default function OrdersPage() {
       )}
 
       <div className="pt-20 max-w-4xl mx-auto px-4 sm:px-6 pb-32">
-        <div className="py-8 flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <ArrowLeft size={18} className="text-gray-500" />
-            <span className="text-sm font-bold text-gray-600 dark:text-gray-300">Kembali</span>
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Pesanan Saya</h1>
-            <p className="text-gray-500 text-sm font-medium">{orders.length} pesanan</p>
-          </div>
+        <div className="py-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Pesanan Saya</h1>
+          <p className="text-gray-500 text-sm font-medium">{orders.length} pesanan</p>
         </div>
 
         {loading ? (
@@ -125,9 +117,32 @@ export default function OrdersPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{formatDate(order.created_at)}</p>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-emerald-400 font-bold border border-green-200 dark:border-emerald-900/50 rounded-full text-xs mt-1 transition-colors">
-                      <CheckCircle size={12} /> Selesai
-                    </span>
+                    <div className="flex items-center justify-end gap-2 mt-1">
+                      {order.is_testnet && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 font-bold border border-yellow-200 dark:border-yellow-800/50 rounded-full text-[10px]">Testnet</span>
+                      )}
+                      {order.status === 'completed' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-emerald-400 font-bold border border-green-200 dark:border-emerald-900/50 rounded-full text-xs transition-colors">
+                          <CheckCircle size={12} /> Selesai
+                        </span>
+                      ) : order.status === 'processing' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-emerald-400 font-bold border border-green-200 dark:border-emerald-900/50 rounded-full text-xs transition-colors">
+                          <CheckCircle size={12} /> Lunas
+                        </span>
+                      ) : order.status === 'delivered' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-emerald-400 font-bold border border-green-200 dark:border-emerald-900/50 rounded-full text-xs transition-colors">
+                          <CheckCircle size={12} /> Selesai
+                        </span>
+                      ) : order.status === 'pending' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-bold border border-orange-200 dark:border-orange-800/50 rounded-full text-xs transition-colors">
+                          <Clock size={12} /> Menunggu
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 dark:bg-gray-800 text-gray-500 font-bold border border-gray-200 dark:border-gray-700 rounded-full text-xs transition-colors">
+                          {order.status || 'Unknown'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -149,12 +164,36 @@ export default function OrdersPage() {
                   ))}
                 </div>
 
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium">
-                    <p>{order.payment_method?.replace('_', ' ').toUpperCase()}</p>
-                    <p className="text-xs opacity-80 mt-0.5 truncate max-w-48">{order.delivery_email}</p>
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                      <p>{order.payment_method?.replace('_', ' ').toUpperCase()}</p>
+                      <p className="text-xs opacity-80 mt-0.5 truncate max-w-48">{order.delivery_email}</p>
+                      {order.buyer_location && (
+                        <p className="text-xs opacity-80 mt-1 flex items-center gap-1">
+                          <MapPin size={10} className="flex-shrink-0" /> {order.buyer_location}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {(order.tx_hash || order.nft_transfer_tx_hash) && (
+                      <div className="mt-3 space-y-1.5 border-t border-gray-100 dark:border-gray-800 pt-3">
+                        {order.tx_hash && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                            Pembayaran: <a href={order.payment_method === 'crypto_sol' ? `https://explorer.solana.com/tx/${order.tx_hash}?cluster=devnet` : `https://sepolia.etherscan.io/tx/${order.tx_hash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-orange-500 hover:underline">{order.tx_hash.slice(0,8)}...{order.tx_hash.slice(-6)}</a>
+                          </p>
+                        )}
+                        {order.nft_transfer_tx_hash && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                            NFT Transfer: <a href={`https://sepolia.etherscan.io/tx/${order.nft_transfer_tx_hash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-purple-500 hover:underline">{order.nft_transfer_tx_hash.slice(0,8)}...{order.nft_transfer_tx_hash.slice(-6)}</a>
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Total</p>
                     <p className="text-lg font-black text-green-600 dark:text-emerald-400">{formatPrice(order.total_amount)}</p>
                   </div>

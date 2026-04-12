@@ -1,6 +1,5 @@
 import { getAuthClient } from '../config/supabaseClient.js';
 
-// Helper to fetch full cart with products - now accepts scoped client
 const getFullCart = async (supabase, userId) => {
   const { data, error } = await supabase
     .from('cart')
@@ -10,7 +9,6 @@ const getFullCart = async (supabase, userId) => {
   return data || [];
 };
 
-// 1. Get user cart
 export const getCart = async (req, res) => {
   try {
     const supabase = getAuthClient(req);
@@ -21,13 +19,11 @@ export const getCart = async (req, res) => {
   }
 };
 
-// 2. Add item to cart
 export const addCartItem = async (req, res) => {
   try {
     const { product_id, quantity } = req.body;
     const supabase = getAuthClient(req);
 
-    // Check if item already exists
     const { data: existing, error: checkError } = await supabase
       .from('cart')
       .select('*')
@@ -38,14 +34,12 @@ export const addCartItem = async (req, res) => {
     if (checkError) throw checkError;
 
     if (existing) {
-      // Update quantity
       const { error } = await supabase
         .from('cart')
         .update({ quantity: existing.quantity + Number(quantity) })
         .eq('id', existing.id);
       if (error) throw error;
     } else {
-      // Insert new
       const { error } = await supabase
         .from('cart')
         .insert([{
@@ -56,7 +50,6 @@ export const addCartItem = async (req, res) => {
       if (error) throw error;
     }
 
-    // Always return full updated cart using the scoped client
     const fullCart = await getFullCart(supabase, req.user.id);
     res.status(existing ? 200 : 201).json(fullCart);
   } catch (error) {
@@ -64,7 +57,6 @@ export const addCartItem = async (req, res) => {
   }
 };
 
-// 3. Update cart item quantity
 export const updateCartItem = async (req, res) => {
   try {
     const { id } = req.params;
@@ -79,7 +71,6 @@ export const updateCartItem = async (req, res) => {
 
     if (error) throw error;
 
-    // Return full updated cart
     const fullCart = await getFullCart(supabase, req.user.id);
     res.json(fullCart);
   } catch (error) {
@@ -87,7 +78,6 @@ export const updateCartItem = async (req, res) => {
   }
 };
 
-// 4. Remove item from cart
 export const removeCartItem = async (req, res) => {
   try {
     const { id } = req.params;
@@ -101,11 +91,23 @@ export const removeCartItem = async (req, res) => {
 
     if (error) throw error;
 
-    // Return full updated cart
     const fullCart = await getFullCart(supabase, req.user.id);
     res.json(fullCart);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+export const clearCart = async (req, res) => {
+  try {
+    const supabase = getAuthClient(req);
+    const { error } = await supabase
+      .from('cart')
+      .delete()
+      .eq('user_id', req.user.id);
 
+    if (error) throw error;
+    res.json({ message: 'Keranjang berhasil dikosongkan' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

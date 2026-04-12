@@ -32,7 +32,6 @@ export default function EditProductPage() {
           stock: data.stock?.toString() || ''
         });
         
-        // Handle images (support both new images array and old single image fallback)
         if (data.images && data.images.length > 0) {
           setExistingImages(data.images);
         } else if (data.image) {
@@ -77,10 +76,8 @@ export default function EditProductPage() {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
       
-      // Kirim array gambar lama yang dipertahankan
       fd.append('existing_images', JSON.stringify(existingImages));
 
-      // Jika ada gambar tunggal tersisa (untuk kompatibilitas fallback jika backend butuh 'image')
       if (existingImages.length > 0 && newImages.length === 0) {
           fd.append('image', existingImages[0]);
       }
@@ -138,7 +135,6 @@ export default function EditProductPage() {
               
               {totalImagesCount > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {/* Existing Images */}
                   {existingImages.map((img, idx) => (
                     <div key={`exist-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
                       <img src={img} alt={`existing-${idx}`} className="w-full h-full object-cover" />
@@ -151,7 +147,6 @@ export default function EditProductPage() {
                     </div>
                   ))}
                   
-                  {/* New Images Previews */}
                   {newPreviews.map((prev, idx) => (
                     <div key={`new-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
                       <img src={prev} alt={`preview-${idx}`} className="w-full h-full object-cover" />
