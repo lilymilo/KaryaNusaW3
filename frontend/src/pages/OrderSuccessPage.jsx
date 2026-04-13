@@ -138,7 +138,7 @@ export default function OrderSuccessPage() {
                     alt={item.products?.name}
                     className="w-14 h-14 object-cover rounded-lg flex-shrink-0 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
                     onError={(e) => {
-                      e.target.src = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400';
+                      e.target.style.display = 'none';
                     }}
                   />
                   <div className="flex-1 min-w-0">

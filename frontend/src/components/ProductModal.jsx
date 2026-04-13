@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Star, Heart, Plus, Minus, MessageCircle, Send, MapPin } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
@@ -13,10 +13,15 @@ const isVideoUrl = (url) => {
   return /\.(mp4|webm|mov|avi|ogv)(\?|$)/.test(lower);
 };
 
-export default function ProductModal({ product, onClose, initialWishlisted = false }) {
+export default function ProductModal({ product, onClose, initialWishlisted = false, onWishlistToggle }) {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [isWishlisted, setIsWishlisted] = useState(initialWishlisted);
+
+  useEffect(() => {
+    setIsWishlisted(initialWishlisted);
+  }, [initialWishlisted]);
+
   const navigate = useNavigate();
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [qty, setQty] = useState(1);
@@ -33,6 +38,20 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
 
   const [localRatings, setLocalRatings] = useState(null);
 
+  useEffect(() => {
+    if (product?.id) {
+      api.get(`/products/${product.id}`)
+        .then(res => {
+          if (res.data?.product_ratings) {
+            setLocalRatings(res.data.product_ratings);
+          } else {
+            setLocalRatings([]);
+          }
+        })
+        .catch(err => console.error('Error fetching product ratings:', err));
+    }
+  }, [product?.id]);
+
   if (!product) return null;
 
   const rawRatings = localRatings || product.product_ratings || [];
@@ -45,7 +64,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
     ? ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length
     : (product.avg_rating || 0);
   const sold = product.sold || 0;
-  const stock = product.stock || 0;
+  const stock = product.stock; // null = unlimited
   const description = product.description || '';
 
   const productImages = product?.images?.length ? product.images : [product?.image];
@@ -93,6 +112,9 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
     try {
       const { data } = await api.post('/wishlist/toggle', { productId: product.id });
       setIsWishlisted(data.active);
+      if (typeof onWishlistToggle === 'function') {
+        onWishlistToggle(product.id, data.active);
+      }
       toast.success(data.message);
     } catch {
       toast.error('Gagal memperbarui wishlist');
@@ -161,7 +183,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
               ) : (
                 <img src={currentImage} alt={product.name}
                   className="w-full h-full object-contain bg-gray-50 dark:bg-gray-800 transition-transform duration-700 group-hover:scale-105"
-                  onError={e => { e.target.src = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400'; }} />
+                  onError={e => { e.target.style.display = 'none'; }} />
               )}
                 
               {productImages.length > 1 && (
@@ -379,22 +401,28 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                         <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Belum ada ulasan.</p>
                      </div>
                    ) : (
-                     <div className="space-y-3">
-                        {ratings.map((r, i) => (
-                          <div key={i} className="p-3 sm:p-4 bg-white dark:bg-gray-800 shadow-sm rounded-2xl border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-full flex items-center justify-center text-[10px] sm:text-xs uppercase border border-gray-200 dark:border-gray-700">
-                                {r.user[0]}
-                              </div>
-                              <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white">{r.user}</span>
-                              <div className="flex gap-0.5 ml-auto">
-                                {[1,2,3,4,5].map(s => <Star key={s} size={8} className={s <= r.score ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} />)}
-                              </div>
-                            </div>
-                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">{r.comment}</p>
-                          </div>
-                        ))}
-                     </div>
+                     <details className="group">
+                        <summary className="font-bold text-sm text-gray-900 dark:text-white mb-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 outline-none">
+                          <span>Daftar Ulasan Produk</span>
+                          <svg className="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </summary>
+                        <div className="space-y-3 mt-4">
+                           {ratings.map((r, i) => (
+                             <div key={i} className="p-3 sm:p-4 bg-white dark:bg-gray-800 shadow-sm rounded-2xl border border-gray-200 dark:border-gray-700">
+                               <div className="flex items-center gap-2 mb-2">
+                                 <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-full flex items-center justify-center text-[10px] sm:text-xs uppercase border border-gray-200 dark:border-gray-700">
+                                   {r.user[0]}
+                                 </div>
+                                 <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white">{r.user}</span>
+                                 <div className="flex gap-0.5 ml-auto">
+                                   {[1,2,3,4,5].map(s => <Star key={s} size={8} className={s <= r.score ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} />)}
+                                 </div>
+                               </div>
+                               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">{r.comment}</p>
+                             </div>
+                           ))}
+                        </div>
+                     </details>
                    )}
                  </div>
                )}
@@ -419,18 +447,18 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                        <input 
                          type="number" 
                          value={qty}
-                         onChange={(e) => setQty(Math.max(1, Math.min(stock, parseInt(e.target.value) || 1)))}
+                         onChange={(e) => setQty(Math.max(1, stock !== null && stock !== undefined ? Math.min(stock, parseInt(e.target.value) || 1) : (parseInt(e.target.value) || 1)))}
                          className="w-10 sm:w-12 text-center bg-transparent border-none focus:ring-0 font-bold text-gray-900 dark:text-white text-sm sm:text-base"
                        />
                        <button 
-                         onClick={() => setQty(Math.min(stock, qty + 1))}
+                         onClick={() => setQty(stock !== null && stock !== undefined ? Math.min(stock, qty + 1) : qty + 1)}
                          className="p-1.5 sm:p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-colors text-green-600 dark:text-emerald-400 disabled:opacity-30 shadow-sm border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
-                         disabled={qty >= stock}
+                         disabled={stock !== null && stock !== undefined && qty >= stock}
                        >
                          <Plus size={14} />
                        </button>
                      </div>
-                     <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium shrink-0">Stok: <span className="text-gray-900 dark:text-white font-bold">{stock}</span></p>
+                     <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium shrink-0">Stok: <span className="text-gray-900 dark:text-white font-bold">{stock !== null && stock !== undefined ? stock : '∞'}</span></p>
                   </div>
 
                  <div className="flex items-center justify-between py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700">

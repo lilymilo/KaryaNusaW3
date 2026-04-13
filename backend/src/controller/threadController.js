@@ -1,36 +1,54 @@
 import { getAuthClient, supabase, supabaseAdmin } from '../config/supabaseClient.js';
 
+const db = supabaseAdmin || supabase;
+
 export const getFeed = async (req, res) => {
   try {
-    const { data: threads, error } = await supabase
+    const { page = 1, limit = 20 } = req.query;
+    const p = Math.max(1, parseInt(page));
+    const l = Math.max(1, parseInt(limit));
+    const from = (p - 1) * l;
+    const to = from + l - 1;
+
+    const { data: threads, count, error } = await db
       .from('threads')
       .select(`
         *,
         author:profiles!author_id(id, full_name, username, avatar, shop_name),
-        product:products!linked_product_id(*),
+        product:products!linked_product_id(id, name, price, image, description),
         quoted_thread:threads!quoted_thread_id(*, author:profiles!author_id(id, full_name, username, avatar, shop_name))
-      `)
+      `, { count: 'exact' })
       .is('parent_id', null)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .range(from, to);
 
     if (error) throw error;
     
-    let likedThreadIds = [];
-    if (req.user) {
-      const { data: likes } = await supabaseAdmin
+    let likedThreadIds = new Set();
+    if (req.user && threads?.length > 0) {
+      const adminClient = supabaseAdmin || getAuthClient(req);
+      const { data: likes } = await adminClient
         .from('thread_likes')
         .select('thread_id')
-        .eq('user_id', req.user.id);
-      likedThreadIds = likes?.map(l => l.thread_id) || [];
+        .eq('user_id', req.user.id)
+        .in('thread_id', threads.map(t => t.id));
+      likedThreadIds = new Set(likes?.map(l => l.thread_id) || []);
     }
 
     const enhancedThreads = threads.map(t => ({
       ...t,
-      isLiked: likedThreadIds.includes(t.id)
+      isLiked: likedThreadIds.has(t.id)
     }));
 
-    res.json(enhancedThreads);
+    res.json({
+      data: enhancedThreads,
+      pagination: {
+        total: count,
+        page: p,
+        limit: l,
+        pages: Math.ceil(count / l)
+      }
+    });
   } catch (err) {
     console.error("getFeed ERROR:", err);
     res.status(500).json({ error: err.message });
@@ -40,38 +58,52 @@ export const getFeed = async (req, res) => {
 export const getUserThreads = async (req, res) => {
   try {
     const { userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const p = Math.max(1, parseInt(page));
+    const l = Math.max(1, parseInt(limit));
+    const from = (p - 1) * l;
+    const to = from + l - 1;
     
-    const { data: threads, error } = await supabase
+    const { data: threads, count, error } = await db
       .from('threads')
       .select(`
         *,
         author:profiles!author_id(id, full_name, username, avatar, shop_name),
-        product:products!linked_product_id(*),
+        product:products!linked_product_id(id, name, price, image, description),
         quoted_thread:threads!quoted_thread_id(*, author:profiles!author_id(id, full_name, username, avatar, shop_name)),
         parent_thread:threads!parent_id(id, author_id, author:profiles!author_id(username))
-      `)
+      `, { count: 'exact' })
       .eq('author_id', userId)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .range(from, to);
 
     if (error) throw error;
 
-    let likedThreadIds = [];
-    if (req.user && threads.length > 0) {
-      const { data: likes } = await supabaseAdmin
+    let likedThreadIds = new Set();
+    if (req.user && threads?.length > 0) {
+      const adminClient = supabaseAdmin || getAuthClient(req);
+      const { data: likes } = await adminClient
         .from('thread_likes')
         .select('thread_id')
         .eq('user_id', req.user.id)
         .in('thread_id', threads.map(t => t.id));
-      likedThreadIds = likes?.map(l => l.thread_id) || [];
+      likedThreadIds = new Set(likes?.map(l => l.thread_id) || []);
     }
 
     const enhancedThreads = threads.map(t => ({
       ...t,
-      isLiked: likedThreadIds.includes(t.id)
+      isLiked: likedThreadIds.has(t.id)
     }));
 
-    res.json(enhancedThreads);
+    res.json({
+      data: enhancedThreads,
+      pagination: {
+        total: count,
+        page: p,
+        limit: l,
+        pages: Math.ceil(count / l)
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -108,7 +140,8 @@ export const toggleLike = async (req, res) => {
     const { id } = req.params; // thread id
     const userId = req.user.id;
 
-    const { data: existing } = await supabaseAdmin
+    const adminClient = supabaseAdmin || getAuthClient(req);
+    const { data: existing } = await adminClient
       .from('thread_likes')
       .select('*')
       .eq('thread_id', id)
@@ -116,14 +149,14 @@ export const toggleLike = async (req, res) => {
       .maybeSingle();
 
     if (existing) {
-      await supabaseAdmin.from('thread_likes').delete().eq('thread_id', id).eq('user_id', userId);
-      const { data: thread } = await supabaseAdmin.from('threads').select('likes_count').eq('id', id).single();
-      await supabaseAdmin.from('threads').update({ likes_count: Math.max(0, thread.likes_count - 1) }).eq('id', id);
+      await adminClient.from('thread_likes').delete().eq('thread_id', id).eq('user_id', userId);
+      const { data: thread } = await adminClient.from('threads').select('likes_count').eq('id', id).single();
+      await adminClient.from('threads').update({ likes_count: Math.max(0, thread.likes_count - 1) }).eq('id', id);
       res.json({ isLiked: false });
     } else {
-      await supabaseAdmin.from('thread_likes').insert([{ thread_id: id, user_id: userId }]);
-      const { data: thread } = await supabaseAdmin.from('threads').select('likes_count').eq('id', id).single();
-      await supabaseAdmin.from('threads').update({ likes_count: thread.likes_count + 1 }).eq('id', id);
+      await adminClient.from('thread_likes').insert([{ thread_id: id, user_id: userId }]);
+      const { data: thread } = await adminClient.from('threads').select('likes_count').eq('id', id).single();
+      await adminClient.from('threads').update({ likes_count: thread.likes_count + 1 }).eq('id', id);
       res.json({ isLiked: true });
     }
   } catch (err) {
@@ -135,7 +168,7 @@ export const getThread = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data: thread, error } = await supabase
+    const { data: thread, error } = await db
       .from('threads')
       .select(`
         *,
@@ -153,17 +186,18 @@ export const getThread = async (req, res) => {
     thread.reposts_count = thread.reposts_count || 0;
     thread.views_count = thread.views_count || 0;
 
-    const { data: replies } = await supabase
+    const { data: replies } = await db
       .from('threads')
       .select('*, author:profiles!author_id(id, full_name, username, avatar, shop_name)')
       .eq('parent_id', id)
       .order('created_at', { ascending: true });
 
-    await supabaseAdmin.from('threads').update({ views_count: thread.views_count + 1 }).eq('id', id);
+    const adminForViews = supabaseAdmin || getAuthClient(req);
+    await adminForViews.from('threads').update({ views_count: thread.views_count + 1 }).eq('id', id);
 
     let isLiked = false;
     if (req.user) {
-      const { data: like } = await supabaseAdmin
+      const { data: like } = await adminForViews
         .from('thread_likes')
         .select('*')
         .eq('thread_id', id)
@@ -198,8 +232,9 @@ export const replyToThread = async (req, res) => {
 
     if (error) throw error;
 
-    const { data: parent } = await supabaseAdmin.from('threads').select('replies_count').eq('id', id).single();
-    await supabaseAdmin.from('threads').update({ replies_count: (parent?.replies_count || 0) + 1 }).eq('id', id);
+    const adminReply = supabaseAdmin || getAuthClient(req);
+    const { data: parent } = await adminReply.from('threads').select('replies_count').eq('id', id).single();
+    await adminReply.from('threads').update({ replies_count: (parent?.replies_count || 0) + 1 }).eq('id', id);
 
     res.json(reply);
   } catch (err) {
@@ -225,7 +260,7 @@ export const repostThread = async (req, res) => {
 
     if (error) throw error;
 
-    const { data: fullRepost } = await supabase
+    const { data: fullRepost } = await db
       .from('threads')
       .select(`
         *,
@@ -235,8 +270,9 @@ export const repostThread = async (req, res) => {
       .eq('id', repost.id)
       .single();
 
-    const { data: quoted } = await supabaseAdmin.from('threads').select('reposts_count').eq('id', id).single();
-    await supabaseAdmin.from('threads').update({ reposts_count: (quoted?.reposts_count || 0) + 1 }).eq('id', id);
+    const adminRepost = supabaseAdmin || getAuthClient(req);
+    const { data: quoted } = await adminRepost.from('threads').select('reposts_count').eq('id', id).single();
+    await adminRepost.from('threads').update({ reposts_count: (quoted?.reposts_count || 0) + 1 }).eq('id', id);
 
     res.json(fullRepost || repost);
   } catch (err) {
@@ -248,26 +284,27 @@ export const deleteThread = async (req, res) => {
   try {
     const { id } = req.params;
     const authSupabase = getAuthClient(req);
+    const adminClient = supabaseAdmin || authSupabase;
     
-    const { data: thread } = await supabaseAdmin.from('threads').select('author_id, parent_id, quoted_thread_id').eq('id', id).single();
+    const { data: thread } = await adminClient.from('threads').select('author_id, parent_id, quoted_thread_id').eq('id', id).single();
     
     if (!thread) return res.status(404).json({ error: 'Utas tidak ditemukan' });
     if (thread.author_id !== req.user.id) return res.status(403).json({ error: 'Tidak memiliki izin menghapus utas ini' });
 
-    const { error } = await supabaseAdmin.from('threads').delete().eq('id', id);
+    const { error } = await adminClient.from('threads').delete().eq('id', id);
     if (error) throw error;
 
     if (thread.parent_id) {
-        const { data: parent } = await supabaseAdmin.from('threads').select('replies_count').eq('id', thread.parent_id).single();
+        const { data: parent } = await adminClient.from('threads').select('replies_count').eq('id', thread.parent_id).single();
         if (parent) {
-           await supabaseAdmin.from('threads').update({ replies_count: Math.max(0, parent.replies_count - 1) }).eq('id', thread.parent_id);
+           await adminClient.from('threads').update({ replies_count: Math.max(0, parent.replies_count - 1) }).eq('id', thread.parent_id);
         }
     }
 
     if (thread.quoted_thread_id) {
-        const { data: quoted } = await supabaseAdmin.from('threads').select('reposts_count').eq('id', thread.quoted_thread_id).single();
+        const { data: quoted } = await adminClient.from('threads').select('reposts_count').eq('id', thread.quoted_thread_id).single();
         if (quoted) {
-           await supabaseAdmin.from('threads').update({ reposts_count: Math.max(0, quoted.reposts_count - 1) }).eq('id', thread.quoted_thread_id);
+           await adminClient.from('threads').update({ reposts_count: Math.max(0, quoted.reposts_count - 1) }).eq('id', thread.quoted_thread_id);
         }
     }
 

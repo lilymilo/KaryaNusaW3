@@ -199,11 +199,12 @@ export default function EditProductPage() {
                   className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors font-medium" />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Stok</label>
-                <input type="text" inputMode="numeric" placeholder="0"
+                <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Stok <span className="font-normal text-xs">(opsional)</span></label>
+                <input type="text" inputMode="numeric" placeholder="Unlimited"
                   value={form.stock ? Number(form.stock).toLocaleString('id-ID') : ''} 
                   onChange={e => setForm({ ...form, stock: e.target.value.replace(/\D/g, '') })}
                   className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors font-medium" />
+                <p className="text-[10px] text-gray-400 mt-1 font-medium">Kosongkan untuk stok tak terbatas</p>
               </div>
             </div>
 

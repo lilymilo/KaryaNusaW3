@@ -165,17 +165,16 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    if (isCryptoPayment && supabaseAdmin) {
+    if (isCryptoPayment && (supabaseAdmin || authSupabase)) {
       for (const item of items) {
         const productId = item.productId || item.id;
-        const { data: prod } = await supabaseAdmin
-          .from('products')
+        const { data: prod } = await (supabaseAdmin || authSupabase).from('products')
           .select('seller_id')
           .eq('id', productId)
           .single();
 
         if (prod?.seller_id) {
-          const { error: balError } = await supabaseAdmin.rpc('increment_balance', {
+          const { error: balError } = await (supabaseAdmin || authSupabase).rpc('increment_balance', {
             p_user_id: prod.seller_id,
             p_amount: Number(item.price) * Number(item.quantity)
           });
@@ -225,8 +224,7 @@ export const requestPayout = async (req, res) => {
     if (!amount || amount <= 0) return res.status(400).json({ error: "Jumlah penarikan tidak valid" });
     if (!wallet_address) return res.status(400).json({ error: "Alamat wallet tujuan wajib diisi" });
 
-    const { data: profile, error: profileErr } = await supabaseAdmin
-      .from('profiles')
+    const { data: profile, error: profileErr } = await (supabaseAdmin || authSupabase).from('profiles')
       .select('balance')
       .eq('id', req.user.id)
       .single();
@@ -236,7 +234,7 @@ export const requestPayout = async (req, res) => {
       return res.status(400).json({ error: "Saldo tidak mencukupi" });
     }
 
-    const { error: deductError } = await supabaseAdmin.rpc('increment_balance', {
+    const { error: deductError } = await (supabaseAdmin || authSupabase).rpc('increment_balance', {
       p_user_id: req.user.id,
       p_amount: -Number(amount)
     });
@@ -283,8 +281,7 @@ export const requestPayout = async (req, res) => {
       }
     }
 
-    const { data, error: payoutError } = await supabaseAdmin
-      .from('payout_requests')
+    const { data, error: payoutError } = await (supabaseAdmin || authSupabase).from('payout_requests')
       .insert([{
         user_id: req.user.id,
         amount: Number(amount),
@@ -297,7 +294,7 @@ export const requestPayout = async (req, res) => {
       .single();
 
     if (payoutError) {
-      await supabaseAdmin.rpc('increment_balance', { p_user_id: req.user.id, p_amount: Number(amount) });
+      await (supabaseAdmin || authSupabase).rpc('increment_balance', { p_user_id: req.user.id, p_amount: Number(amount) });
       throw payoutError;
     }
 
@@ -339,8 +336,7 @@ export const transferBalance = async (req, res) => {
     }
 
     // 1. Cari penerima
-    const { data: recipient, error: recErr } = await supabaseAdmin
-      .from('profiles')
+    const { data: recipient, error: recErr } = await (supabaseAdmin || authSupabase).from('profiles')
       .select('id, balance, username')
       .eq('username', recipientUsername)
       .single();
@@ -348,8 +344,7 @@ export const transferBalance = async (req, res) => {
     if (recErr || !recipient) return res.status(404).json({ error: `User "${recipientUsername}" tidak ditemukan` });
 
     // 2. Cek saldo pengirim
-    const { data: sender, error: senderErr } = await supabaseAdmin
-      .from('profiles')
+    const { data: sender, error: senderErr } = await (supabaseAdmin || authSupabase).from('profiles')
       .select('balance')
       .eq('id', req.user.id)
       .single();
@@ -358,26 +353,25 @@ export const transferBalance = async (req, res) => {
     if ((sender?.balance || 0) < amount) return res.status(400).json({ error: "Saldo tidak mencukupi" });
 
     // 3. Eksekusi transfer (Atomic via RPC)
-    const { error: deductErr } = await supabaseAdmin.rpc('increment_balance', {
+    const { error: deductErr } = await (supabaseAdmin || authSupabase).rpc('increment_balance', {
       p_user_id: req.user.id,
       p_amount: -Number(amount)
     });
     if (deductErr) throw deductErr;
 
-    const { error: addErr } = await supabaseAdmin.rpc('increment_balance', {
+    const { error: addErr } = await (supabaseAdmin || authSupabase).rpc('increment_balance', {
       p_user_id: recipient.id,
       p_amount: Number(amount)
     });
 
     if (addErr) {
       // Rollback sender balance if recipient update fails
-      await supabaseAdmin.rpc('increment_balance', { p_user_id: req.user.id, p_amount: Number(amount) });
+      await (supabaseAdmin || authSupabase).rpc('increment_balance', { p_user_id: req.user.id, p_amount: Number(amount) });
       throw addErr;
     }
 
     // 4. Log transaksi (menggunakan tabel payout_requests sebagai general ledger sementara)
-    await supabaseAdmin
-      .from('payout_requests')
+    await (supabaseAdmin || authSupabase).from('payout_requests')
       .insert([
         {
           user_id: req.user.id,
@@ -402,3 +396,63 @@ export const transferBalance = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getIncomingOrders = async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const adminClient = supabaseAdmin || getAuthClient(req);
+
+    // Ambil produk-produk milik seller ini
+    const { data: myProducts, error: prodErr } = await adminClient
+      .from('products')
+      .select('id, name, image')
+      .eq('seller_id', sellerId);
+
+    if (prodErr) throw prodErr;
+    if (!myProducts || myProducts.length === 0) return res.json([]);
+
+    const productIds = myProducts.map(p => p.id);
+
+    // Ambil order_items yang berisi produk seller, beserta info pembeli
+    const { data: items, error } = await adminClient
+      .from('order_items')
+      .select(`
+        id, quantity, price,
+        product_id,
+        orders(
+          id, created_at, status, payment_method, delivery_email,
+          profiles!user_id(id, full_name, username, avatar)
+        )
+      `)
+      .in('product_id', productIds)
+      .limit(100);
+
+    if (error) throw error;
+
+    // Gabungkan info produk ke setiap item
+    const productMap = Object.fromEntries(myProducts.map(p => [p.id, p]));
+    const result = (items || [])
+      .filter(item => item.orders)
+      .map(item => ({
+        order_item_id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        product: productMap[item.product_id] || null,
+        order: {
+          id: item.orders.id,
+          created_at: item.orders.created_at,
+          status: item.orders.status,
+          payment_method: item.orders.payment_method,
+          delivery_email: item.orders.delivery_email,
+        },
+        buyer: item.orders.profiles || null,
+      }))
+      .sort((a, b) => new Date(b.order.created_at) - new Date(a.order.created_at));
+
+    res.json(result);
+  } catch (error) {
+    console.error('[getIncomingOrders] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+

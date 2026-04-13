@@ -52,18 +52,27 @@ export default function ShopPage() {
         setProducts(data.products);
 
         if (data.shop) {
-           const [statsRes, reviewRes, threadsRes] = await Promise.all([
-             api.get(`/social/stats/${data.shop.id}`),
-             api.get(`/social/review/${data.shop.id}`),
-             api.get(`/threads/user/${data.shop.id}`)
-           ]);
-           setFollowStats(statsRes.data);
-           setReviews({ data: reviewRes.data.reviews, stats: reviewRes.data.stats });
-           setUserThreads(threadsRes.data);
+           // Fetch secara terpisah agar satu error tidak menggagalkan semua
+           try {
+             const statsRes = await api.get(`/social/stats/${data.shop.id}`);
+             setFollowStats(statsRes.data);
+           } catch (e) { console.error('Stats error:', e); }
+
+           try {
+             const reviewRes = await api.get(`/social/review/${data.shop.id}`);
+             setReviews({ data: reviewRes.data.reviews || [], stats: reviewRes.data.stats || { total: 0, average: 0 } });
+           } catch (e) { console.error('Review error:', e); }
+
+           try {
+             const threadsRes = await api.get(`/threads/user/${data.shop.id}`);
+             setUserThreads(threadsRes.data.data || threadsRes.data || []);
+           } catch (e) { console.error('Threads error:', e); }
 
            if (user && user.id !== data.shop.id) {
-             const statusRes = await api.get(`/social/follow/${data.shop.id}/status`);
-             setIsFollowing(statusRes.data.isFollowing);
+             try {
+               const statusRes = await api.get(`/social/follow/${data.shop.id}/status`);
+               setIsFollowing(statusRes.data.isFollowing);
+             } catch (e) { console.error('Follow status error:', e); }
            }
         }
 
@@ -91,6 +100,17 @@ export default function ShopPage() {
     } catch (err) {
       toast.error(err.response?.data?.error || 'Gagal mengubah status follow');
     }
+  };
+
+  const handleWishlistToggle = (productId, isActive) => {
+    setWishlistIds(prev => {
+      if (isActive) {
+        if (prev.includes(productId)) return prev;
+        return [...prev, productId];
+      } else {
+        return prev.filter(id => id !== productId);
+      }
+    });
   };
 
   const submitReview = async (e) => {
@@ -160,7 +180,7 @@ export default function ShopPage() {
         setUserThreads(prev => [repostData, ...prev]);
       } else {
         const { data } = await api.get(`/threads/user/${shop.id}`);
-        setUserThreads(data);
+        setUserThreads(data.data || []);
       }
     } catch (err) {
       toast.error('Gagal merepost utas');
@@ -281,9 +301,16 @@ export default function ShopPage() {
             {user?.id !== shop?.id && (
               <button 
                 onClick={toggleFollow}
-                className={`px-8 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.98] ${isFollowing ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-200 border border-gray-300 dark:border-gray-700' : 'btn-primary text-white'}`}
+                className={`px-8 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.98] ${isFollowing ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 hover:border-red-200 border border-gray-300 dark:border-gray-700 group' : 'btn-primary text-white'}`}
               >
-                 {isFollowing ? 'Mengikuti' : 'Ikuti Profil'}
+                 {isFollowing ? (
+                   <>
+                     <span className="group-hover:hidden">Mengikuti</span>
+                     <span className="hidden group-hover:inline">Batal Ikuti</span>
+                   </>
+                 ) : (
+                   'Ikuti Profil'
+                 )}
               </button>
             )}
             <div className="flex gap-2">
@@ -338,7 +365,12 @@ export default function ShopPage() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                   {products.map(p => (
-                    <ProductCard key={p.id} product={p} initialWishlisted={wishlistIds.includes(p.id)} />
+                    <ProductCard 
+                      key={p.id} 
+                      product={p} 
+                      initialWishlisted={wishlistIds.includes(p.id)} 
+                      onWishlistToggle={handleWishlistToggle}
+                    />
                   ))}
                 </div>
               )}
@@ -424,7 +456,7 @@ export default function ShopPage() {
 
                           {thread.product && (
                             <div onClick={(e) => { e.stopPropagation(); navigate(`/home`); }} className="block mb-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 flex gap-4 items-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group relative z-10">
-                              <img src={thread.product.image_url} className="w-16 h-16 rounded-lg object-cover" />
+                              <img src={thread.product.image || thread.product.image_url} className="w-16 h-16 rounded-lg object-cover" />
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-green-600 transition-colors line-clamp-1">{thread.product.name}</h4>
                                 <p className="text-green-600 dark:text-emerald-400 font-bold text-sm mt-1">Rp {thread.product.price.toLocaleString('id-ID')}</p>

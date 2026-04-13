@@ -32,7 +32,7 @@ const balanceCoversAmount = (bal, need) =>
 
 export default function CheckoutPage() {
   const { cart, cartTotal, clearCart } = useCart();
-  const { walletAddress, connectWallet, walletType, disconnectWallet, sendETH, sendSOL, balance, isTestnet } = useWallet();
+  const { walletAddress, connectWallet, walletType, disconnectWallet, sendETH, balance, isTestnet } = useWallet();
   const navigate = useNavigate();
   const location = useLocation();
   const directItem = location.state?.directItem;
@@ -501,7 +501,7 @@ export default function CheckoutPage() {
                       alt=""
                       className="h-12 w-12 shrink-0 rounded-lg border border-gray-100 object-cover dark:border-gray-700"
                       onError={(e) => {
-                        e.target.src = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400';
+                        e.target.style.display = 'none';
                       }}
                     />
                     <div className="min-w-0 flex-1">

@@ -6,11 +6,11 @@ const router = express.Router();
 
 router.post('/follow/:target_id', protect, toggleFollow);
 router.get('/follow/:target_id/status', optionalProtect, checkFollowStatus);
-router.get('/stats/:userId', getFollowStats);
-router.get('/followers/:userId', getFollowers);
-router.get('/following/:userId', getFollowing);
+router.get('/stats/:userId', optionalProtect, getFollowStats);
+router.get('/followers/:userId', optionalProtect, getFollowers);
+router.get('/following/:userId', optionalProtect, getFollowing);
 
 router.post('/review/:target_id', protect, addReview);
-router.get('/review/:target_id', getReviews);
+router.get('/review/:target_id', optionalProtect, getReviews);
 
 export default router;

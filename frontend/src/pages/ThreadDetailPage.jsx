@@ -208,7 +208,7 @@ export default function ThreadDetailPage() {
 
           {thread.product && (
             <div onClick={() => navigate(`/home`)} className="mb-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-3 flex gap-4 items-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group cursor-pointer">
-              <img src={thread.product.image_url} className="w-16 h-16 rounded-lg object-cover" />
+              <img src={thread.product.image || thread.product.image_url} className="w-16 h-16 rounded-lg object-cover" />
               <div className="flex-1 min-w-0">
                 <h4 className="font-bold text-[15px] text-gray-900 dark:text-white group-hover:text-green-600 transition-colors line-clamp-1">{thread.product.name}</h4>
                 <p className="text-green-600 dark:text-emerald-400 font-bold text-sm mt-1">Rp {thread.product.price.toLocaleString('id-ID')}</p>

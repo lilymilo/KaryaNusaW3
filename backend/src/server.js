@@ -1,6 +1,7 @@
 import './config/loadEnv.js';
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import productRoutes from './routes/productRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
@@ -31,6 +32,7 @@ process.on('uncaughtException', (err) => {
 });
 
 app.use(cors());
+app.use(compression());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
@@ -60,23 +62,21 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5001;
 
-if (!process.env.VERCEL) {
-  const server = app.listen(PORT, () => {
-    console.log(`========================================`);
-    console.log(` KaryaNusa Backend is RUNNING `);
-    console.log(` URL: http://localhost:${PORT} `);
-    console.log(` Environment: ${process.env.NODE_ENV || 'development'} `);
-    console.log(`========================================`);
-  });
+const server = app.listen(PORT, () => {
+  console.log(`========================================`);
+  console.log(` KaryaNusa Backend is RUNNING `);
+  console.log(` URL: http://localhost:${PORT} `);
+  console.log(` Environment: ${process.env.NODE_ENV || 'development'} `);
+  console.log(`========================================`);
+});
 
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error(`ERROR: Port ${PORT} is already in use. Please close the other process or change the PORT in .env`);
-      process.exit(1);
-    } else {
-      console.error('SERVER STARTUP ERROR:', err);
-    }
-  });
-}
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`ERROR: Port ${PORT} is already in use. Please close the other process or change the PORT in .env`);
+    process.exit(1);
+  } else {
+    console.error('SERVER STARTUP ERROR:', err);
+  }
+});
 
 export default app;

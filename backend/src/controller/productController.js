@@ -1,10 +1,21 @@
-import { supabase, getAuthClient } from '../config/supabaseClient.js';
+import { supabase, supabaseAdmin, getAuthClient } from '../config/supabaseClient.js';
 import { mintNFT, isNFTEnabled } from '../services/nftService.js';
 
 export const getProducts = async (req, res) => {
   try {
-    const { search, category, minPrice, maxPrice, sort } = req.query;
-    let query = supabase.from('products').select('*, product_ratings(*), profiles(shop_name, full_name, wallet_address)');
+    const { search, category, minPrice, maxPrice, sort, page = 1, limit = 12 } = req.query;
+    
+    // Convert to numbers
+    const p = Math.max(1, parseInt(page));
+    const l = Math.max(1, parseInt(limit));
+    const from = (p - 1) * l;
+    const to = from + l - 1;
+
+    // Optimize selection: only get required fields for card display
+    // is_active is important if you have soft delete/deactivation
+    let query = supabase
+      .from('products')
+      .select('id, name, price, description, image, category, seller_id, seller_name, avg_rating, sold, token_id, created_at, profiles(shop_name, full_name, username, avatar)', { count: 'exact' });
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -25,13 +36,43 @@ export const getProducts = async (req, res) => {
     else if (sort === 'popular') query = query.order('sold', { ascending: false });
     else query = query.order('created_at', { ascending: false });
 
-    const { data, error } = await query;
+    // Apply pagination
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
     if (error) {
       console.error("Fetch Products Error:", error.message);
       throw error;
     }
-    res.json(data);
+
+    // Check wishlist status for logged in users
+    let products = data;
+    if (req.user && data?.length > 0) {
+      const productIds = data.map(p => p.id);
+      const { data: wishlistData } = await supabase
+        .from('wishlist')
+        .select('product_id')
+        .eq('user_id', req.user.id)
+        .in('product_id', productIds);
+      
+      const wishlistedSet = new Set(wishlistData?.map(w => w.product_id));
+      products = data.map(product => ({
+        ...product,
+        is_wishlisted: wishlistedSet.has(product.id)
+      }));
+    }
+
+    res.json({
+      data: products,
+      pagination: {
+        total: count,
+        page: p,
+        limit: l,
+        pages: Math.ceil(count / l)
+      }
+    });
   } catch (error) {
+    console.error("getProducts controller error:", error);
     res.status(500).json({ error: "Gagal mengambil daftar produk. Silakan coba lagi nanti." });
   }
 };
@@ -111,7 +152,7 @@ export const createProduct = async (req, res) => {
         price: Number(price), 
         description: description || '',
         category: category || 'Other',
-        stock: Number(stock) || 0,
+        stock: stock !== undefined && stock !== '' && stock !== null ? Number(stock) : null,
         image: imageUrl,
         images: imagesArr
       }])
@@ -203,7 +244,7 @@ export const updateProduct = async (req, res) => {
     if (price) updateData.price = Number(price);
     if (description) updateData.description = description;
     if (category) updateData.category = category;
-    if (stock !== undefined) updateData.stock = Number(stock);
+    if (stock !== undefined) updateData.stock = stock === '' || stock === null ? null : Number(stock);
 
     let oldImages = [];
     if (existing_images) {
@@ -270,7 +311,8 @@ export const deleteProduct = async (req, res) => {
     
     // 1. Cek apakah produk memiliki riwayat pesanan (Order history)
     // Jika ada pesanan, produk tidak boleh dihapus secara permanen demi integritas data
-    const { data: orders, error: orderError } = await supabaseAdmin
+    const adminClient = supabaseAdmin || getAuthClient(req);
+    const { data: orders, error: orderError } = await adminClient
       .from('order_items')
       .select('id')
       .eq('product_id', id)
@@ -287,16 +329,16 @@ export const deleteProduct = async (req, res) => {
     // Gunakan supabaseAdmin untuk memastikan kita punya izin menghapus record dari user lain (misal: cart orang lain)
     
     // Hapus dari Wishlist
-    await supabaseAdmin.from('wishlist').delete().eq('product_id', id);
+    await adminClient.from('wishlist').delete().eq('product_id', id);
     
     // Hapus dari Keranjang (Cart)
-    await supabaseAdmin.from('cart').delete().eq('product_id', id);
+    await adminClient.from('cart').delete().eq('product_id', id);
     
     // Hapus Rating/Reviews
-    await supabaseAdmin.from('product_ratings').delete().eq('product_id', id);
+    await adminClient.from('product_ratings').delete().eq('product_id', id);
     
     // Lepaskan tautan di Threads (set null)
-    await supabaseAdmin.from('threads').update({ linked_product_id: null }).eq('linked_product_id', id);
+    await adminClient.from('threads').update({ linked_product_id: null }).eq('linked_product_id', id);
 
     // 3. Akhirnya hapus produk utama
     const { data, error } = await authSupabase
@@ -322,15 +364,15 @@ export const addRating = async (req, res) => {
   try {
     const { id: product_id } = req.params;
     const { score, comment } = req.body;
-    const authSupabase = getAuthClient(req);
+    const adminClient = supabaseAdmin || supabase;
 
-    const { data: profile } = await authSupabase
+    const { data: profile } = await adminClient
       .from('profiles')
       .select('full_name')
       .eq('id', req.user.id)
       .single();
 
-    const { error: ratingError } = await authSupabase
+    const { error: ratingError } = await adminClient
       .from('product_ratings')
       .insert([{
         product_id,
@@ -340,22 +382,32 @@ export const addRating = async (req, res) => {
         comment
       }]);
 
-    if (ratingError) throw ratingError;
+    if (ratingError) {
+      console.error("[addRating] Insert rating error:", ratingError);
+      throw ratingError;
+    }
 
-    const { data: ratings } = await authSupabase
+    const { data: ratings } = await adminClient
       .from('product_ratings')
       .select('score')
       .eq('product_id', product_id);
     
-    const avgRating = ratings.reduce((s, r) => s + r.score, 0) / ratings.length;
+    const avgRating = ratings && ratings.length > 0
+      ? ratings.reduce((s, r) => s + r.score, 0) / ratings.length
+      : Number(score);
 
-    await authSupabase
+    const { error: updateError } = await adminClient
       .from('products')
       .update({ avg_rating: avgRating })
       .eq('id', product_id);
 
+    if (updateError) {
+       console.error("[addRating] Update product avg rating error:", updateError);
+    }
+
     res.json({ message: "Rating berhasil ditambahkan" });
   } catch (error) {
+    console.error("[addRating] Error:", error);
     res.status(500).json({ error: error.message });
   }
 };

@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '../config/supabaseClient.js';
+import { supabase, supabaseAdmin, getAuthClient } from '../config/supabaseClient.js';
 
 export const toggleFollow = async (req, res) => {
   try {
@@ -9,31 +9,41 @@ export const toggleFollow = async (req, res) => {
       return res.status(400).json({ error: 'Tidak dapat follow diri sendiri.' });
     }
 
-    const { data: existingFollow, error: checkError } = await supabaseAdmin
-      .from('follows')
+    const adminClient = supabaseAdmin || getAuthClient(req);
+    
+    // Check if following exists - force count first to be sure
+    const { data: existingFollow } = await adminClient.from('follows')
       .select('*')
       .eq('follower_id', follower_id)
       .eq('following_id', target_id)
       .maybeSingle();
 
-    if (checkError) throw checkError;
-
     if (existingFollow) {
-      const { error: unfollowError } = await supabaseAdmin
-        .from('follows')
+      // DELETE
+      const { error: unfollowError } = await adminClient.from('follows')
         .delete()
         .eq('follower_id', follower_id)
         .eq('following_id', target_id);
       
       if (unfollowError) throw unfollowError;
-      return res.json({ message: 'Berhasil Unfollow', isFollowing: false });
+      return res.json({ message: 'Berhasil berhenti mengikuti', isFollowing: false });
     } else {
-      const { error: followError } = await supabaseAdmin
-        .from('follows')
+      // INSERT
+      const { error: followError } = await adminClient.from('follows')
         .insert([{ follower_id, following_id: target_id }]);
       
-      if (followError) throw followError;
-      return res.json({ message: 'Berhasil Follow', isFollowing: true });
+      if (followError) {
+        // If it still fails with duplicate, it means it exists but select missed it - so delete it instead (toggle)
+        if (followError.code === '23505') {
+           await adminClient.from('follows')
+            .delete()
+            .eq('follower_id', follower_id)
+            .eq('following_id', target_id);
+           return res.json({ message: 'Berhasil berhenti mengikuti', isFollowing: false });
+        }
+        throw followError;
+      }
+      return res.json({ message: 'Berhasil mengikuti', isFollowing: true });
     }
   } catch (error) {
     console.error('toggleFollow Error:', error);
@@ -47,8 +57,8 @@ export const checkFollowStatus = async (req, res) => {
     if (!req.user) return res.json({ isFollowing: false });
     
     const follower_id = req.user.id;
-    const { data: follow } = await supabaseAdmin
-      .from('follows')
+    const adminClient = supabaseAdmin || getAuthClient(req);
+    const { data: follow } = await adminClient.from('follows')
       .select('*')
       .eq('follower_id', follower_id)
       .eq('following_id', target_id)
@@ -57,25 +67,27 @@ export const checkFollowStatus = async (req, res) => {
     res.json({ isFollowing: !!follow });
   } catch (error) {
     console.error('checkFollowStatus Error:', error);
-    res.json({ isFollowing: false }); // silent fail
+    res.json({ isFollowing: false });
   }
 };
 
 export const getFollowStats = async (req, res) => {
   try {
     const { userId } = req.params;
+    const client = supabaseAdmin || (req.user ? getAuthClient(req) : supabase);
     
-    const { count: followersCount, error: followersError } = await supabaseAdmin
-      .from('follows')
+    const { count: followersCount, error: followersError } = await client.from('follows')
       .select('*', { count: 'exact', head: true })
       .eq('following_id', userId);
       
-    const { count: followingCount, error: followingError } = await supabaseAdmin
-      .from('follows')
+    const { count: followingCount, error: followingError } = await client.from('follows')
       .select('*', { count: 'exact', head: true })
       .eq('follower_id', userId);
 
-    if (followersError || followingError) throw new Error('Database count error');
+    if (followersError || followingError) {
+      console.error('getFollowStats DB error:', followersError || followingError);
+      throw new Error('Database count error');
+    }
 
     res.json({ followers: followersCount || 0, following: followingCount || 0 });
   } catch (error) {
@@ -97,8 +109,7 @@ export const addReview = async (req, res) => {
       return res.status(400).json({ error: 'Rating harus antara 1 dan 5.' });
     }
 
-    const { error: upsertError } = await supabaseAdmin
-      .from('reviews')
+    const { error: upsertError } = await (supabaseAdmin || getAuthClient(req)).from('reviews')
       .upsert(
         { reviewer_id, target_id, rating, comment: comment || null },
         { onConflict: 'reviewer_id, target_id' }
@@ -116,8 +127,10 @@ export const getReviews = async (req, res) => {
   try {
     const { target_id } = req.params;
     
-    const { data: reviews, error } = await supabaseAdmin
-      .from('reviews')
+    // Selalu gunakan admin client untuk bypass RLS
+    const client = supabaseAdmin || supabase;
+    
+    const { data: reviews, error } = await client.from('reviews')
       .select(`
         id, rating, comment, created_at,
         reviewer:profiles!reviewer_id(id, full_name, username, avatar)
@@ -125,19 +138,25 @@ export const getReviews = async (req, res) => {
       .eq('target_id', target_id)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('[getReviews] Supabase error:', error);
+      throw error;
+    }
 
-    const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
-    const averageRating = reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : 0;
+    console.log(`[getReviews] target_id=${target_id}, found=${reviews?.length || 0}`);
+
+    const totalRating = (reviews || []).reduce((sum, r) => sum + r.rating, 0);
+    const averageRating = reviews && reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : 0;
 
     res.json({
-      reviews,
+      reviews: reviews || [],
       stats: {
-        total: reviews.length,
+        total: (reviews || []).length,
         average: parseFloat(averageRating)
       }
     });
   } catch (error) {
+    console.error('[getReviews] Error:', error);
     res.status(500).json({ error: 'Gagal mengambil daftar ulasan.' });
   }
 };
@@ -145,8 +164,8 @@ export const getReviews = async (req, res) => {
 export const getFollowers = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { data: list, error } = await supabaseAdmin
-      .from('follows')
+    const client = supabaseAdmin || (req.user ? getAuthClient(req) : supabase);
+    const { data: list, error } = await client.from('follows')
       .select(`
         follower:profiles!follower_id(id, full_name, username, avatar)
       `)
@@ -163,8 +182,8 @@ export const getFollowers = async (req, res) => {
 export const getFollowing = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { data: list, error } = await supabaseAdmin
-      .from('follows')
+    const client = supabaseAdmin || (req.user ? getAuthClient(req) : supabase);
+    const { data: list, error } = await client.from('follows')
       .select(`
         following:profiles!following_id(id, full_name, username, avatar)
       `)

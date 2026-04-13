@@ -151,7 +151,7 @@ export default function OrdersPage() {
                     <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 transition-colors">
                       <img src={item.products?.image} alt={item.products?.name}
                         className="w-12 h-12 object-cover rounded-lg flex-shrink-0 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
-                        onError={e => { e.target.src = 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400'; }} />
+                        onError={e => { e.target.style.display = 'none'; }} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{item.products?.name}</p>
                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400">x{item.quantity} · <span className="text-gray-900 dark:text-white">{formatPrice(item.price)}</span></p>

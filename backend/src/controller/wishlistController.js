@@ -1,9 +1,9 @@
-import { getAuthClient } from '../config/supabaseClient.js';
+import { supabaseAdmin, getAuthClient } from '../config/supabaseClient.js';
 
 export const getWishlist = async (req, res) => {
   try {
-    const authSupabase = getAuthClient(req);
-    const { data, error } = await authSupabase
+    const client = supabaseAdmin || getAuthClient(req);
+    const { data, error } = await client
       .from('wishlist')
       .select(`
         *,
@@ -20,6 +20,7 @@ export const getWishlist = async (req, res) => {
       `)
       .eq('user_id', req.user.id);
 
+    console.log(`[GetWishlist] User: ${req.user.id}, Count: ${data?.length}, Error:`, error);
     if (error) throw error;
     res.json(data);
   } catch (error) {
@@ -30,9 +31,9 @@ export const getWishlist = async (req, res) => {
 export const toggleWishlist = async (req, res) => {
   try {
     const { productId } = req.body;
-    const authSupabase = getAuthClient(req);
+    const client = supabaseAdmin || getAuthClient(req);
 
-    const { data: existing, error: checkError } = await authSupabase
+    const { data: existing, error: checkError } = await client
       .from('wishlist')
       .select('*')
       .eq('user_id', req.user.id)
@@ -42,7 +43,7 @@ export const toggleWishlist = async (req, res) => {
     if (checkError) throw checkError;
 
     if (existing) {
-      const { error: deleteError } = await authSupabase
+      const { error: deleteError } = await client
         .from('wishlist')
         .delete()
         .eq('id', existing.id);
@@ -50,11 +51,17 @@ export const toggleWishlist = async (req, res) => {
       if (deleteError) throw deleteError;
       return res.json({ message: "Dihapus dari wishlist", active: false });
     } else {
-      const { error: insertError } = await authSupabase
+      const { error: insertError } = await client
         .from('wishlist')
         .insert([{ user_id: req.user.id, product_id: productId }]);
       
-      if (insertError) throw insertError;
+      if (insertError) {
+        if (insertError.code === '23505') {
+          await client.from('wishlist').delete().eq('user_id', req.user.id).eq('product_id', productId);
+          return res.json({ message: "Dihapus dari wishlist", active: false });
+        }
+        throw insertError;
+      }
       return res.json({ message: "Ditambahkan ke wishlist", active: true });
     }
   } catch (error) {

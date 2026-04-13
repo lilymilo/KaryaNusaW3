@@ -36,8 +36,12 @@ export const CartProvider = ({ children }) => {
   };
 
   const clearCart = async () => {
-    await api.delete('/cart/clear');
-    setCart([]);
+    try {
+      await api.delete('/cart/clear');
+      setCart([]);
+    } catch (err) {
+      console.error('clearCart error:', err);
+    }
   };
 
   const cartCount = cart.reduce((s, i) => s + (Number(i.quantity) || 0), 0);

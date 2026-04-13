@@ -91,41 +91,77 @@ export const walletLogin = async (req, res) => {
       return res.status(401).json({ error: 'Tanda tangan wallet tidak valid. Silakan coba lagi.' });
     }
 
+    const adminClient = supabaseAdmin || supabase;
+    
     if (!supabaseAdmin) {
-      console.error('SUPABASE_SERVICE_ROLE_KEY missing — wallet profile lookup requires service role.');
-      return res.status(500).json({
-        error: 'Server belum dikonfigurasi untuk wallet auth. Tambahkan SUPABASE_SERVICE_ROLE_KEY di backend/.env.',
-      });
+      console.warn('SUPABASE_SERVICE_ROLE_KEY missing — fallback to anon client. Profile lookup might fail if RLS is strict.');
     }
 
     const { existingProfile, profileLookupError } = await fetchProfileByWallet(
-      supabaseAdmin,
+      adminClient,
       walletAddress,
       chain
     );
 
     if (profileLookupError) {
       console.error('Profile lookup error (wallet-login):', profileLookupError);
+      
+      let errorDetail = 'Gagal mencari data akun.';
+      if (profileLookupError.message?.includes('does not exist')) {
+        errorDetail = 'Tabel atau kolom "wallet_address" tidak ditemukan di Supabase.';
+      } else if (profileLookupError.code === 'PGRST116') {
+        // query maybeSingle but result not found - handled by existingProfile check
+      } else if (profileLookupError.message?.includes('fetch') || profileLookupError.code === 'ERR_NETWORK') {
+        errorDetail = 'Tidak dapat terhubung ke Supabase. Periksa SUPABASE_URL di backend/.env.';
+      }
+
       const hint = [profileLookupError.message, profileLookupError.code, profileLookupError.details]
         .filter(Boolean)
         .join(' — ');
+
       return res.status(500).json({
-        error: 'Gagal mencari data akun.',
-        hint:
-          hint ||
-          'Jalankan SQL di Supabase: backend/add_wallet_column.sql — pastikan SUPABASE_URL + SERVICE_ROLE_KEY satu project.',
+        error: errorDetail,
+        hint: hint || 'Jalankan SQL di Supabase: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS wallet_address TEXT UNIQUE; — dan pastikan SUPABASE_URL + SERVICE_ROLE_KEY valid.',
       });
     }
+    
 
     const normalizedWalletKey = walletAddress.toLowerCase();
 
     let userData, sessionToken, refreshToken;
 
     if (existingProfile) {
-      const walletEmail = `${walletAddress.toLowerCase()}@wallet.karyanusa.local`;
+      const walletEmail = `${walletAddress.toLowerCase()}@wallet.karyanusa.com`;
+      const walletPassword = walletAddress.toLowerCase() + '_karyanusa_wallet_v1';
+
+      // SELF-HEALING: Ensure the existng user is synced with the latest standardized credentials
+      if (supabaseAdmin) {
+        try {
+          // 1. If the stored email is old (.local), update it to .com in both Auth and Profiles
+          const currentEmail = existingProfile.email || '';
+          if (currentEmail.endsWith('.local')) {
+            console.log(`[WalletLogin] Self-healing: Migrating ${existingProfile.id} from .local to .com`);
+            await supabaseAdmin.auth.admin.updateUserById(existingProfile.id, { 
+              email: walletEmail, 
+              email_confirm: true 
+            });
+            
+            await adminClient.from('profiles').update({ email: walletEmail }).eq('id', existingProfile.id);
+            existingProfile.email = walletEmail;
+          }
+
+          // 2. Always sync password to ensure the hardcoded wallet password format works
+          await supabaseAdmin.auth.admin.updateUserById(existingProfile.id, { 
+            password: walletPassword 
+          });
+        } catch (syncErr) {
+          console.warn(`[WalletLogin] Self-healing sync failed for ${existingProfile.id}:`, syncErr.message);
+        }
+      }
+
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: walletEmail,
-        password: walletAddress.toLowerCase() + '_karyanusa_wallet_v1'
+        email: existingProfile.email || walletEmail,
+        password: walletPassword
       });
 
       if (signInError) {
@@ -155,31 +191,57 @@ export const walletLogin = async (req, res) => {
         balance: existingProfile.balance || 0,
       };
     } else {
-      const walletEmail = `${walletAddress.toLowerCase()}@wallet.karyanusa.local`;
+      const walletEmail = `${walletAddress.toLowerCase()}@wallet.karyanusa.com`;
       const walletPassword = walletAddress.toLowerCase() + '_karyanusa_wallet_v1';
       const shortAddr = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
       const userRole = 'seller';
 
-      const { data: adminAuthData, error: adminAuthError } = await supabaseAdmin.auth.admin.createUser({
-        email: walletEmail,
-        password: walletPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: `Wallet ${shortAddr}`,
-          wallet_address: normalizedWalletKey,
-          role: userRole
-        }
-      });
+      let authData, authError;
 
-      if (adminAuthError) {
-        console.error("Wallet admin signup error:", adminAuthError);
-        return res.status(400).json({ error: adminAuthError.message });
+      if (supabaseAdmin) {
+        const res = await supabaseAdmin.auth.admin.createUser({
+          email: walletEmail,
+          password: walletPassword,
+          email_confirm: true,
+          user_metadata: {
+            full_name: `Wallet ${shortAddr}`,
+            wallet_address: normalizedWalletKey,
+            role: userRole
+          }
+        });
+        authData = { user: res.data.user };
+        authError = res.error;
+      } else {
+        const res = await supabase.auth.signUp({
+          email: walletEmail,
+          password: walletPassword,
+          options: {
+            data: {
+              full_name: `Wallet ${shortAddr}`,
+              wallet_address: normalizedWalletKey,
+              role: userRole
+            }
+          }
+        });
+        authData = res.data;
+        authError = res.error;
       }
 
-      const { error: profileError } = await supabaseAdmin
+      if (authError) {
+        console.error("Wallet signup error:", authError);
+        return res.status(400).json({ error: authError.message });
+      }
+
+      // Check if user object exists after signup (usually true if email confirmation is disabled)
+      const userId = authData?.user?.id;
+      if (!userId) {
+        return res.status(400).json({ error: 'Berhasil daftar, tetapi mohon konfirmasi email terlebih dahulu.' });
+      }
+
+      const { error: profileError } = await adminClient
         .from('profiles')
         .upsert([{
-          id: adminAuthData.user.id,
+          id: userId,
           email: walletEmail,
           full_name: `Wallet ${shortAddr}`,
           wallet_address: normalizedWalletKey,
@@ -204,7 +266,7 @@ export const walletLogin = async (req, res) => {
       sessionToken = signInData.session.access_token;
       refreshToken = signInData.session.refresh_token;
       userData = {
-        id: adminAuthData.user.id,
+        id: userId,
         email: walletEmail,
         full_name: `Wallet ${shortAddr}`,
         username: null,
@@ -261,7 +323,12 @@ export const linkWallet = async (req, res) => {
         ? walletAddress.trim()
         : walletAddress.toLowerCase();
 
-    const { data: existing } = await supabaseAdmin
+    const authSupabase = getAuthClient(req);
+    
+    // Fallback to anon client for querying if admin not available
+    const adminClient = supabaseAdmin || authSupabase;
+
+    const { data: existing } = await adminClient
       .from('profiles')
       .select('id')
       .eq('wallet_address', normalizedWalletKey)
@@ -271,7 +338,7 @@ export const linkWallet = async (req, res) => {
       return res.status(400).json({ error: 'Wallet ini sudah terhubung dengan akun lain.' });
     }
 
-    const { data: updatedProfile, error } = await supabaseAdmin
+    const { data: updatedProfile, error } = await authSupabase
       .from('profiles')
       .update({ wallet_address: normalizedWalletKey })
       .eq('id', req.user.id)
@@ -328,7 +395,8 @@ export const register = async (req, res) => {
     
     // Mekanisme Retry untuk mengatasi Race Condition di Supabase (FK profiles_id_fkey)
     for (let i = 0; i < 3; i++) {
-      const { data: upsertData, error: upsertError } = await supabaseAdmin
+      const adminClient = supabaseAdmin || supabase;
+      const { data: upsertData, error: upsertError } = await adminClient
         .from('profiles')
         .upsert([
           { 
@@ -367,7 +435,8 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: profileError.message });
     }
 
-    const { data: verifiedProfile, error: fetchProfileError } = await supabaseAdmin
+    const adminClient = supabaseAdmin || supabase;
+    const { data: verifiedProfile, error: fetchProfileError } = await adminClient
       .from('profiles')
       .select('*')
       .eq('id', authData.user.id)
@@ -406,7 +475,8 @@ export const login = async (req, res) => {
 
   let loginAuthData = null;
 
-  const { data: matchedProfile } = await supabaseAdmin.from('profiles')
+  const adminClient = supabaseAdmin || supabase;
+  const { data: matchedProfile } = await adminClient.from('profiles')
     .select('*')
     .or(`email.ilike.${identifier},username.ilike.${identifier},wallet_address.ilike.${identifier}`)
     .maybeSingle();
@@ -415,7 +485,7 @@ export const login = async (req, res) => {
     if (matchedProfile.wallet_address) {
       const hashedInput = crypto.createHash('sha256').update(password).digest('hex');
       if (matchedProfile.custom_password === hashedInput) {
-        const walletEmail = `${matchedProfile.wallet_address.toLowerCase()}@wallet.karyanusa.local`;
+        const walletEmail = `${matchedProfile.wallet_address.toLowerCase()}@wallet.karyanusa.com`;
         const hiddenPass = matchedProfile.wallet_address.toLowerCase() + '_karyanusa_wallet_v1';
         const { data: authData, error } = await supabase.auth.signInWithPassword({ email: walletEmail, password: hiddenPass });
         if (!error && authData.session) loginAuthData = authData;
@@ -457,7 +527,8 @@ export const login = async (req, res) => {
 
 export const getAccount = async (req, res) => {
   try {
-    let { data: profile, error: profileError } = await supabaseAdmin
+    const authClient = supabaseAdmin || getAuthClient(req);
+    let { data: profile, error: profileError } = await authClient
       .from('profiles')
       .select('*')
       .eq('id', req.user.id)
@@ -466,7 +537,8 @@ export const getAccount = async (req, res) => {
     const metaAvatar = req.user.user_metadata?.avatar_url || req.user.user_metadata?.picture || null;
 
     if (profileError && profileError.code === 'PGRST116') {
-      const { data: newProfile, error: insertError } = await supabaseAdmin
+      const authClient = supabaseAdmin || getAuthClient(req);
+      const { data: newProfile, error: insertError } = await authClient
         .from('profiles')
         .insert([
           {
@@ -486,7 +558,8 @@ export const getAccount = async (req, res) => {
       throw profileError;
     } else {
       if (!profile.avatar && metaAvatar) {
-        const { data: updatedProfile } = await supabaseAdmin
+        const authClient = supabaseAdmin || getAuthClient(req);
+        const { data: updatedProfile } = await authClient
           .from('profiles')
           .update({ avatar: metaAvatar })
           .eq('id', req.user.id)
@@ -585,22 +658,42 @@ export const setPassword = async (req, res) => {
     const { newPassword } = req.body;
     if (!newPassword) return res.status(400).json({ error: 'Password baru diperlukan.' });
 
-    const { data: profile } = await supabaseAdmin.from('profiles')
+    // Use admin client for consistent permissions
+    const admin = supabaseAdmin || supabase;
+    
+    const { data: profile } = await admin.from('profiles')
       .select('wallet_address')
       .eq('id', req.user.id)
       .single();
 
     if (profile && profile.wallet_address) {
+      // For wallet users, we allow setting a custom password for manual login
       const hashed = crypto.createHash('sha256').update(newPassword).digest('hex');
-      const { error } = await supabaseAdmin.from('profiles')
+      const { error } = await admin.from('profiles')
         .update({ custom_password: hashed })
         .eq('id', req.user.id);
       
       if (error) throw error;
+      
+      // Also update the hidden auth password so regular sign-in works
+      if (supabaseAdmin) {
+        await supabaseAdmin.auth.admin.updateUserById(req.user.id, { 
+          password: newPassword 
+        });
+      }
     } else {
-      const authSupabase = getAuthClient(req);
-      const { error } = await authSupabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
+      // For standard email users
+      if (supabaseAdmin) {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(req.user.id, { 
+          password: newPassword 
+        });
+        if (error) throw error;
+      } else {
+        // Fallback (might still hit session missing if service key is absent)
+        const authSupabase = getAuthClient(req);
+        const { error } = await authSupabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+      }
     }
 
     res.json({ message: "Password berhasil disimpan. Kini Anda bisa menggunakannya untuk login manual." });

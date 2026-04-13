@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Star, ShoppingCart, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -11,12 +11,17 @@ const isVideoUrl = (url) => {
   return /\.(mp4|webm|mov|avi|ogv)(\?|$)/i.test(url);
 };
 
-function ProductCard({ product, onClick, onDelete, onEdit, initialWishlisted = false }) {
+function ProductCard({ product, onClick, onDelete, onEdit, initialWishlisted = false, onWishlistToggle }) {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [isWishlisted, setIsWishlisted] = useState(initialWishlisted);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    setIsWishlisted(initialWishlisted);
+  }, [initialWishlisted]);
+
   const isNFT = product.token_id !== null && product.token_id !== undefined;
 
   const handleAddToCart = async (e) => {
@@ -42,6 +47,9 @@ function ProductCard({ product, onClick, onDelete, onEdit, initialWishlisted = f
     try {
       const { data } = await api.post('/wishlist/toggle', { productId: product.id });
       setIsWishlisted(data.active);
+      if (typeof onWishlistToggle === 'function') {
+        onWishlistToggle(product.id, data.active);
+      }
       toast.success(data.message);
     } catch {
       toast.error('Gagal memperbarui wishlist');

@@ -3,7 +3,7 @@ import {
   User, Store, Settings, Heart, Package, 
   TrendingUp, Home, Camera, Check, Save, 
   Trash2, Edit, Plus, ExternalLink, ShoppingBag, ArrowLeft,
-  Wallet, Landmark, History, Link, RefreshCw, AlertTriangle, Eye, EyeOff, Send
+  Wallet, Landmark, History, Link, RefreshCw, AlertTriangle, Eye, EyeOff, Send, Users
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -26,7 +26,7 @@ const validateWA = (num) => {
   return waRegex.test(cleaned) ? cleaned : null;
 };
 
-const formatPrice = (p) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p);
+import { formatPrice } from '../utils/format';
 
 export default function ProfilePage() {
   const { user, updateUserData, linkWallet } = useAuth();
@@ -115,11 +115,12 @@ export default function ProfilePage() {
   const [linkLoading, setLinkLoading] = useState(false);
   const [socialStats, setSocialStats] = useState({ followers: 0, following: 0 });
   const [modalType, setModalType] = useState(null);
+  const [incomingOrders, setIncomingOrders] = useState([]);
 
   useEffect(() => {
     if (activeTab === 'wishlist') fetchWishlist();
     if (activeTab === 'produk') fetchMyProducts();
-    if (activeTab === 'statistik') fetchStats();
+    if (activeTab === 'statistik') { fetchStats(); fetchIncomingOrders(); }
     if (activeTab === 'dompet') fetchPayouts();
     fetchSocialStats();
   }, [activeTab, user?.id]);
@@ -132,10 +133,15 @@ export default function ProfilePage() {
   };
 
   const fetchMyProducts = async () => {
+    if (!user?.id) return;
     try {
-      const { data } = await api.get('/products');
-      setMyProducts(data.filter(p => p.seller_id === user.id));
+      const { data } = await api.get(`/shop/${user.id}`);
+      setMyProducts(data.products || []);
     } catch (err) { console.error(err); }
+  };
+
+  const handleWishlistToggle = (productId, isActive) => {
+    fetchWishlist();
   };
 
   const fetchStats = async () => {
@@ -151,6 +157,14 @@ export default function ProfilePage() {
       setPayouts(data);
     } catch (err) { console.error(err); }
   };
+
+  const fetchIncomingOrders = async () => {
+    try {
+      const { data } = await api.get('/orders/incoming');
+      setIncomingOrders(data || []);
+    } catch (err) { console.error(err); }
+  };
+
 
   const fetchSocialStats = async () => {
     if (!user?.id) return;
@@ -497,7 +511,13 @@ export default function ProfilePage() {
                   <form onSubmit={handleUpdateProfile} className="space-y-6">
                     <div className="space-y-4">
                       <div className="relative h-40 w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 group transition-colors">
-                        <img src={previews.shop_banner || 'https://via.placeholder.com/1200x400'} className="w-full h-full object-cover" />
+                        {previews.shop_banner ? (
+                          <img src={previews.shop_banner} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-r from-green-100 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/10 flex items-center justify-center">
+                            <Camera size={32} className="text-gray-300 dark:text-gray-600" />
+                          </div>
+                        )}
                         <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white font-medium">
                           <Camera className="mr-2" /> Ganti Banner Toko
                           <input type="file" className="hidden" onChange={(e) => handleFileChange(e, 'shop_banner')} accept="image/*" />
@@ -506,7 +526,13 @@ export default function ProfilePage() {
 
                       <div className="flex flex-col sm:flex-row gap-6">
                         <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-4 border-white dark:border-gray-800 shadow-md flex-shrink-0 group">
-                          <img src={previews.avatar || 'https://via.placeholder.com/200'} className="w-full h-full object-cover bg-white dark:bg-gray-800" />
+                          {previews.avatar ? (
+                            <img src={previews.avatar} className="w-full h-full object-cover bg-white dark:bg-gray-800" />
+                          ) : (
+                            <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                              <User size={32} className="text-gray-400 dark:text-gray-500" />
+                            </div>
+                          )}
                           <div className="absolute inset-0 flex items-center justify-center bg-transparent group-hover:bg-black/10 transition-colors pointer-events-none">
                           </div>
                         </div>
@@ -560,35 +586,38 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                 <div className="space-y-3">
-                  {wishlist.filter(item => item.products).map(item => (
-                    <div key={item.id} 
-                      onClick={() => navigate(`/product/${item.products.id}`)}
-                      className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 flex items-center gap-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-green-300 dark:hover:border-emerald-500 transition-all group">
-                      <img src={item.products.image} className="w-16 h-16 rounded-lg object-cover border border-gray-100 dark:border-gray-800 group-hover:scale-105 transition-transform" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 dark:text-white truncate text-sm sm:text-base">{item.products.name}</h4>
-                        <p className="text-green-600 dark:text-emerald-400 font-bold text-sm">{formatPrice(item.products.price)}</p>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">🛒 {item.products.profiles?.shop_name || item.products.profiles?.full_name || 'Penjual'}</p>
+                  {wishlist.filter(item => (item.products || item.product)).map(item => {
+                    const p = item.products || item.product;
+                    return (
+                      <div key={item.id} 
+                        onClick={() => navigate(`/product/${p.id}`)}
+                        className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 flex items-center gap-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-green-300 dark:hover:border-emerald-500 transition-all group">
+                        <img src={p.image} className="w-16 h-16 rounded-lg object-cover border border-gray-100 dark:border-gray-800 group-hover:scale-105 transition-transform" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-gray-900 dark:text-white truncate text-sm sm:text-base">{p.name}</h4>
+                          <p className="text-green-600 dark:text-emerald-400 font-bold text-sm">{formatPrice(p.price)}</p>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">🛒 {p.profiles?.shop_name || p.profiles?.full_name || 'Penjual'}</p>
+                        </div>
+                        <div className="flex gap-2">
+                           <button 
+                             onClick={async (e) => { 
+                               e.stopPropagation(); 
+                               try {
+                                 await api.post('/wishlist/toggle', { productId: p.id });
+                                 fetchWishlist();
+                                 toast.success('Dihapus dari wishlist');
+                               } catch (err) {
+                                 toast.error('Gagal menghapus');
+                               }
+                             }} 
+                             className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                           >
+                             <Heart size={20} fill="currentColor" />
+                           </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                         <button 
-                           onClick={async (e) => { 
-                             e.stopPropagation(); 
-                             try {
-                               await api.post('/wishlist/toggle', { productId: item.products.id });
-                               fetchWishlist();
-                               toast.success('Dihapus dari wishlist');
-                             } catch (err) {
-                               toast.error('Gagal menghapus');
-                             }
-                           }} 
-                           className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                         >
-                           <Heart size={20} fill="currentColor" />
-                         </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 )}
               </div>
@@ -613,7 +642,12 @@ export default function ProfilePage() {
                 <div className="space-y-3">
                   {selected && (
                     <Suspense fallback={null}>
-                      <ProductModal product={selected} onClose={() => setSelected(null)} />
+                      <ProductModal 
+                        product={selected} 
+                        onClose={() => setSelected(null)} 
+                        initialWishlisted={wishlist.some(w => w.product_id === selected.id)}
+                        onWishlistToggle={handleWishlistToggle}
+                      />
                     </Suspense>
                   )}
                   {myProducts.map(p => (
@@ -629,7 +663,7 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3">
                           <p className="text-green-600 dark:text-emerald-400 font-bold text-sm sm:text-base">{formatPrice(p.price)}</p>
                           <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded-md">
-                            <span>📦 Stok: <b>{p.stock}</b></span>
+                            <span>📦 Stok: <b>{p.stock !== null && p.stock !== undefined ? p.stock : '∞'}</b></span>
                             <span className="w-px h-2 bg-gray-300 dark:bg-gray-700"></span>
                             <span>📈 Terjual: <b>{p.sold}</b></span>
                           </div>
@@ -688,7 +722,7 @@ export default function ProfilePage() {
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-black text-gray-900 dark:text-white">{item.sold} kali</p>
-                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Stok sisa: {item.stock}</p>
+                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Stok sisa: {item.stock !== null && item.stock !== undefined ? item.stock : '∞'}</p>
                             </div>
                           </div>
                         ))}
@@ -700,6 +734,56 @@ export default function ProfilePage() {
                     Memuat statistik...
                   </div>
                 )}
+
+                {/* Daftar Pembeli */}
+                <details className="group bg-white dark:bg-gray-900 shadow-sm rounded-3xl border border-gray-200 dark:border-gray-700 transition-colors">
+                  <summary className="p-6 sm:p-8 font-bold text-gray-900 dark:text-white flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden outline-none">
+                    <span className="flex items-center gap-2"><Users size={18} className="text-green-600 dark:text-emerald-400" /> Riwayat Pembeli</span>
+                    <svg className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </summary>
+                  <div className="px-6 sm:px-8 pb-6 sm:pb-8 border-t border-gray-100 dark:border-gray-800 pt-4">
+                  {incomingOrders.length === 0 ? (
+                    <div className="text-center py-10">
+                      <Users size={40} className="mx-auto text-gray-200 dark:text-gray-700 mb-3" />
+                      <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Belum ada penjualan.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {incomingOrders.map((item, i) => (
+                        <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+                          {/* Avatar pembeli */}
+                          {item.buyer?.avatar ? (
+                            <img src={item.buyer.avatar} className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                              <User size={20} className="text-gray-400" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm text-gray-900 dark:text-white truncate">
+                              {item.buyer?.full_name || 'Pembeli'} <span className="font-normal text-gray-500 dark:text-gray-400">@{item.buyer?.username || '-'}</span>
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {item.product?.name || 'Produk'} · <span className="font-semibold">×{item.quantity}</span>
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-black text-green-600 dark:text-emerald-400">{formatPrice(item.price * item.quantity)}</p>
+                            <p className="text-[10px] text-gray-400">
+                              {new Date(item.order?.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </p>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              item.order?.status === 'processing' || item.order?.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-emerald-400' :
+                              item.order?.status === 'pending' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
+                              'bg-gray-100 text-gray-500'
+                            }`}>{item.order?.status || '-'}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  </div>
+                </details>
               </div>
             )}
 
@@ -822,10 +906,12 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                    <History size={20} className="text-green-600" /> Riwayat Pencairan
-                  </h3>
+                <details className="group bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
+                  <summary className="p-8 font-bold text-gray-900 dark:text-white flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden outline-none">
+                    <span className="flex items-center gap-2"><History size={20} className="text-green-600" /> Riwayat Pencairan</span>
+                    <svg className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </summary>
+                  <div className="px-8 pb-8 border-t border-gray-100 dark:border-gray-800 pt-4">
                   {payouts.length === 0 ? (
                     <div className="text-center py-12">
                       <History size={48} className="mx-auto text-gray-200 mb-2" />
@@ -866,7 +952,8 @@ export default function ProfilePage() {
                       </table>
                     </div>
                   )}
-                </div>
+                  </div>
+                </details>
               </div>
             )}
           </div>

@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { createProduct, getProducts, getProductById, deleteProduct, updateProduct, addRating } from '../controller/productController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, optionalProtect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 const upload = multer({ 
@@ -9,7 +9,7 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB for video/audio support
 });
 
-router.get('/', getProducts);
+router.get('/', optionalProtect, getProducts);
 router.get('/:id', getProductById);
 router.post('/', protect, upload.array('images', 5), createProduct);
 router.put('/:id', protect, upload.array('images', 5), updateProduct);

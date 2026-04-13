@@ -1,8 +1,10 @@
-import { supabase } from '../config/supabaseClient.js';
+import { supabase, supabaseAdmin } from '../config/supabaseClient.js';
+
+const db = supabaseAdmin || supabase;
 
 export const getSellerStats = async (req, res) => {
   try {
-    const { data: products, error: productsError } = await supabase
+    const { data: products, error: productsError } = await db
       .from('products')
       .select('name, price, sold, stock')
       .eq('seller_id', req.user.id);
@@ -13,7 +15,7 @@ export const getSellerStats = async (req, res) => {
     const totalRevenue = products.reduce((sum, p) => sum + ((p.sold || 0) * p.price), 0);
     const bestSellers = [...products].sort((a, b) => b.sold - a.sold).slice(0, 5);
 
-    const { count: activeOrders, error: ordersError } = await supabase
+    const { count: activeOrders, error: ordersError } = await db
       .from('orders')
       .select('id', { count: 'exact', head: true })
       .neq('status', 'delivered')

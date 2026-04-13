@@ -333,12 +333,22 @@ export default function ChatPage() {
   };
 
   const getAvatar = (p) => {
-    if (!p) return 'https://ui-avatars.com/api/?name=User&background=random';
+    if (!p) return null;
     const url = p.shop_logo_url || p.avatar;
     if (url) return url;
-    
-    const name = p.shop_name || p.full_name || 'User';
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=16a34a&color=fff&bold=true`;
+    return null;
+  };
+
+  const AvatarImg = ({ profile, className }) => {
+    const url = getAvatar(profile);
+    const name = profile?.shop_name || profile?.full_name || 'U';
+    const initial = name.charAt(0).toUpperCase();
+    if (url) return <img src={url} alt="" className={className} />;
+    return (
+      <div className={`${className} bg-green-600 dark:bg-green-500 flex items-center justify-center text-white font-black text-sm`}>
+        {initial}
+      </div>
+    );
   };
 
   if (!user) return null;
@@ -376,7 +386,7 @@ export default function ChatPage() {
                   }}
                     className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer transition-all ${activePartner?.id === usr.id ? 'bg-green-600 dark:bg-green-500 text-white shadow-lg' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 border border-transparent hover:border-gray-200 dark:hover:border-gray-700'}`}>
                     <div className="relative">
-                      <img src={getAvatar(usr)} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shadow-sm bg-white dark:bg-gray-800" />
+                      <AvatarImg profile={usr} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shadow-sm bg-white dark:bg-gray-800" />
                       <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 ${onlineUsers.has(usr.id) ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -401,7 +411,7 @@ export default function ChatPage() {
                 }}
                   className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl sm:rounded-2xl cursor-pointer transition-all ${activePartner?.id === conv.user.id ? 'bg-green-600 dark:bg-green-500 text-white shadow-lg' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 border border-transparent hover:border-gray-200 dark:hover:border-gray-700'}`}>
                   <div className="relative">
-                    <img src={getAvatar(conv.user)} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shadow-sm bg-white dark:bg-gray-800" />
+                    <AvatarImg profile={conv.user} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shadow-sm bg-white dark:bg-gray-800" />
                     <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 ${onlineUsers.has(conv.user.id) ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -436,7 +446,7 @@ export default function ChatPage() {
                     className="p-2 sm:p-2.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 dark:text-gray-400 transition-all md:hidden shadow-sm">
                     <ArrowLeft size={18} />
                   </button>
-                  <img src={getAvatar(activePartner)} alt="" className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full object-cover border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors" />
+                  <AvatarImg profile={activePartner} className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full object-cover border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors" />
                   <div className="min-w-0 flex-1 ml-2 cursor-pointer group" onClick={() => navigate(`/shop/${activePartner.username || activePartner.id}`)}>
                     <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg truncate group-hover:text-green-600 transition-colors">{activePartner.shop_name || activePartner.full_name}</h3>
                     {typingUsers.has(activePartner.id) ? (
