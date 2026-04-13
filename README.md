@@ -729,4 +729,4 @@ Proyek ini dilisensikan di bawah [ISC License](https://opensource.org/licenses/I
 
 <p align="center">
   Dibuat dengan ❤️ untuk Nusantara
-</p>
+</p># KaryaNusaW3
