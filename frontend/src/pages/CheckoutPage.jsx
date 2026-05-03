@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Phone, CreditCard, Wallet, Building2, ArrowLeft, ShoppingBag, Bitcoin, Loader2, AlertTriangle } from 'lucide-react';
+import { Phone, CreditCard, Wallet, Building2, ArrowLeft, ShoppingBag, Bitcoin, Loader2, AlertTriangle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWallet, WALLET_TYPES } from '../context/WalletContext';
 import { formatPrice } from '../utils/format';
@@ -36,7 +36,6 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const directItem = location.state?.directItem;
-  const prefilledBuyerLocation = location.state?.buyerLocation ?? '';
 
   const checkoutItems = useMemo(() => (directItem ? [directItem] : cart), [directItem, cart]);
   const checkoutTotal = directItem ? directItem.products.price * directItem.quantity : cartTotal;
@@ -45,7 +44,6 @@ export default function CheckoutPage() {
   const [form, setForm] = useState({
     delivery_email: '',
     phone: '',
-    buyer_location: prefilledBuyerLocation,
     paymentMethod: '',
     notes: '',
   });
@@ -55,10 +53,7 @@ export default function CheckoutPage() {
   const cryptoPhaseRef = useRef('');
 
   useEffect(() => {
-    if (prefilledBuyerLocation) {
-      setForm((f) => ({ ...f, buyer_location: prefilledBuyerLocation }));
-    }
-  }, [prefilledBuyerLocation]);
+  }, []);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -190,7 +185,7 @@ export default function CheckoutPage() {
         })),
         total_amount: checkoutTotal,
         delivery_email: form.delivery_email,
-        buyer_location: form.buyer_location.trim() || null,
+
         phone: validatedPhone,
         payment_method: isCrypto ? 'crypto_eth' : form.paymentMethod,
         notes: form.notes,
@@ -251,7 +246,7 @@ export default function CheckoutPage() {
     form.paymentMethod === 'crypto' && walletAddress && balance !== null && cryptoAmt && !balanceCoversAmount(balance, cryptoAmt.amount);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pt-8 pb-24 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pt-8 pb-8 px-4">
       {txStatus ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-white/85 dark:bg-gray-950/85 backdrop-blur-md p-4"
@@ -301,24 +296,24 @@ export default function CheckoutPage() {
           onClick={() => navigate(-1)}
           className="mb-6 flex items-center gap-2 font-medium text-gray-500 transition-colors hover:text-gray-900 dark:hover:text-white"
         >
-          <ArrowLeft size={20} /> Kembali
+          <ArrowLeft size={18} /> Kembali
         </button>
 
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Checkout</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Lengkapi data pengiriman digital dan pembayaran.</p>
+        <header className="mb-5">
+          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Checkout</h1>
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Lengkapi data pengiriman dan pembayaran.</p>
         </header>
 
-        <div className="grid gap-8 lg:grid-cols-5">
-          <div className="space-y-6 lg:col-span-3">
-            <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-              <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
-                <ShoppingBag size={18} className="text-green-600 dark:text-emerald-400" />
+        <div className="grid gap-5 lg:grid-cols-5">
+          <div className="space-y-4 lg:col-span-3">
+            <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <ShoppingBag size={16} className="text-green-600 dark:text-emerald-400" />
                 Pengiriman digital
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700 dark:text-gray-300">
                     Email pengiriman <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -327,26 +322,13 @@ export default function CheckoutPage() {
                     placeholder="contoh@email.com"
                     value={form.delivery_email}
                     onChange={(e) => setForm((f) => ({ ...f, delivery_email: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   />
                 </div>
+
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <MapPin size={14} className="mr-1 inline text-gray-400" />
-                    Lokasi pembeli
-                  </label>
-                  <input
-                    type="text"
-                    autoComplete="address-level1"
-                    placeholder="Kota, provinsi, atau negara"
-                    value={form.buyer_location}
-                    onChange={(e) => setForm((f) => ({ ...f, buyer_location: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <Phone size={14} className="mr-1 inline text-gray-400" />
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700 dark:text-gray-300">
+                    <Phone size={12} className="mr-1 inline text-gray-400" />
                     WhatsApp {form.paymentMethod !== 'crypto' && <span className="text-red-500">*</span>}
                   </label>
                   <input
@@ -355,32 +337,32 @@ export default function CheckoutPage() {
                     placeholder="08xxxxxxxxxx"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Catatan (opsional)</label>
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700 dark:text-gray-300">Catatan (opsional)</label>
                   <textarea
                     rows={2}
                     placeholder="Instruksi tambahan…"
                     value={form.notes}
                     onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                    className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   />
                 </div>
               </div>
             </section>
 
-            <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-              <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
-                <CreditCard size={18} className="text-green-600 dark:text-emerald-400" />
+            <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <CreditCard size={16} className="text-green-600 dark:text-emerald-400" />
                 Metode pembayaran
               </h2>
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {PAYMENT_METHODS.map(({ id, label, icon: Icon, desc }) => (
                   <li key={id}>
                     <label
-                      className={`flex cursor-pointer items-center gap-4 rounded-xl border p-4 transition-colors ${
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                         form.paymentMethod === id
                           ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                           : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
@@ -395,7 +377,7 @@ export default function CheckoutPage() {
                         className="sr-only"
                       />
                       <span
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                           form.paymentMethod === id
                             ? id === 'crypto'
                               ? 'bg-orange-500 text-white'
@@ -403,7 +385,7 @@ export default function CheckoutPage() {
                             : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                         }`}
                       >
-                        <Icon size={20} />
+                        <Icon size={16} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-bold text-gray-900 dark:text-white">{label}</span>
@@ -491,8 +473,8 @@ export default function CheckoutPage() {
           </div>
 
           <aside className="lg:col-span-2">
-            <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-              <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Ringkasan</h2>
+            <div className="sticky top-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+              <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Ringkasan</h2>
               <ul className="mb-4 max-h-64 space-y-3 overflow-y-auto pr-1">
                 {checkoutItems.map((item) => (
                   <li key={item.id || item.product_id} className="flex gap-3">

@@ -15,7 +15,7 @@ export const getProducts = async (req, res) => {
     // is_active is important if you have soft delete/deactivation
     let query = supabase
       .from('products')
-      .select('id, name, price, description, image, category, seller_id, seller_name, avg_rating, sold, token_id, created_at, profiles(shop_name, full_name, username, avatar)', { count: 'exact' });
+      .select('id, name, price, description, image, images, category, seller_id, seller_name, avg_rating, sold, token_id, created_at, profiles(shop_name, full_name, username, avatar)', { count: 'exact' });
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -365,6 +365,23 @@ export const addRating = async (req, res) => {
     const { id: product_id } = req.params;
     const { score, comment } = req.body;
     const adminClient = supabaseAdmin || supabase;
+
+    // Check if user has purchased this product
+    const { data: purchases, error: purchaseError } = await adminClient
+      .from('order_items')
+      .select('id, orders!inner(user_id, status)')
+      .eq('product_id', product_id)
+      .eq('orders.user_id', req.user.id)
+      .in('orders.status', ['processing', 'completed'])
+      .limit(1);
+
+    if (purchaseError) {
+      console.error("[addRating] Purchase check error:", purchaseError);
+    }
+
+    if (!purchases || purchases.length === 0) {
+      return res.status(403).json({ error: "Anda harus membeli produk ini terlebih dahulu sebelum memberikan ulasan" });
+    }
 
     const { data: profile } = await adminClient
       .from('profiles')

@@ -22,7 +22,7 @@ const getFileType = (file) => {
 };
 
 export default function CreateProductPage() {
-  const [form, setForm] = useState({ name: '', price: '', description: '', category: 'E-book', stock: '' });
+  const [form, setForm] = useState({ name: '', price: '', description: '', category: 'E-book' });
   const [mediaFiles, setMediaFiles] = useState([]); // { file, preview, type }
   const [loading, setLoading] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -67,11 +67,15 @@ export default function CreateProductPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.price || !form.description) return toast.error('Nama, harga, dan deskripsi wajib diisi');
+    for (let k in form) {
+      if (!form[k]) return toast.error('Mohon lengkapi semua data');
+    }
     setLoading(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+      Object.entries(form).forEach(([k, v]) => {
+        fd.append(k, v);
+      });
       mediaFiles.forEach(m => fd.append('images', m.file));
       await api.post('/products', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       toast.success('Produk berhasil dibuat!');
@@ -89,7 +93,7 @@ export default function CreateProductPage() {
       <Navbar onCartOpen={() => setCartOpen(true)} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
 
-      <div className="pt-20 max-w-2xl mx-auto px-4 sm:px-6 pb-32">
+      <div className="pt-16 max-w-2xl mx-auto px-4 sm:px-6 pb-20 sm:pb-8">
         <div className="py-8">
           <h1 className="text-2xl font-black text-gray-900 dark:text-white">Buat Produk</h1>
           <p className="text-gray-500 text-sm font-medium">Jual produk Anda di KaryaNusa</p>
@@ -163,25 +167,12 @@ export default function CreateProductPage() {
                 className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Harga (IDR) *</label>
-                <input type="text" inputMode="numeric" placeholder="0"
-                  value={form.price ? Number(form.price).toLocaleString('id-ID') : ''} 
-                  onChange={e => setForm({ ...form, price: e.target.value.replace(/\D/g, '') })}
-                  className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors font-medium" />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Stok <span className="font-normal text-xs">(opsional)</span></label>
-                <input type="text" inputMode="numeric" placeholder="Unlimited"
-                  value={form.stock ? Number(form.stock).toLocaleString('id-ID') : ''} 
-                  onChange={e => {
-                    const raw = e.target.value.replace(/\D/g, '');
-                    setForm({ ...form, stock: raw });
-                  }}
-                  className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors font-medium" />
-                <p className="text-[10px] text-gray-400 mt-1 font-medium">Kosongkan untuk stok tak terbatas</p>
-              </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Harga (IDR) *</label>
+              <input type="text" inputMode="numeric" placeholder="0"
+                value={form.price ? Number(form.price).toLocaleString('id-ID') : ''} 
+                onChange={e => setForm({ ...form, price: e.target.value.replace(/\D/g, '') })}
+                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors font-medium" />
             </div>
 
             <div>

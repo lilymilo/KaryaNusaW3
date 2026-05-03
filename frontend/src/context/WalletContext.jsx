@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { BrowserProvider } from 'ethers';
+import { BrowserProvider, formatEther } from 'ethers';
 import toast from 'react-hot-toast';
 import { getMetaMaskProvider } from '../utils/evmProvider';
 
@@ -66,8 +66,15 @@ export const WalletProvider = ({ children }) => {
         }
       };
       
-      const handleChain = () => {
-        window.location.reload();
+      const handleChain = (chainId) => {
+        toast('Jaringan blockchain berubah. Memperbarui koneksi...', { icon: '🔗' });
+        // Re-fetch balance for the new chain instead of hard-reloading
+        if (walletAddress) {
+          const provider = new BrowserProvider(eth);
+          provider.getBalance(walletAddress).then(bal => {
+            setBalance(formatEther(bal));
+          }).catch(() => setBalance(null));
+        }
       };
 
       eth.on('accountsChanged', handleAccounts);

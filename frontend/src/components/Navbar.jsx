@@ -46,11 +46,11 @@ export default function Navbar({ onCartOpen }) {
 
   return (
     <>
-      <nav className="fixed top-0 w-full z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+      <nav className="fixed top-0 w-full z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
           <Link to="/home" className="flex items-center gap-2">
-            <img src={logo} alt="KaryaNusa Logo" className="w-9 h-9 rounded-lg object-contain" />
-            <span className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block tracking-tight">KaryaNusa</span>
+            <img src={logo} alt="KaryaNusa Logo" className="w-8 h-8 rounded-lg object-contain" />
+            <span className="text-lg font-bold text-gray-900 dark:text-white hidden sm:block tracking-tight">KaryaNusa</span>
           </Link>
 
           <div className="flex items-center gap-3 sm:gap-4">
@@ -99,34 +99,26 @@ export default function Navbar({ onCartOpen }) {
                   )}
                 </div>
 
-                <div className={`absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl transition-all duration-200 overflow-hidden z-50 ${isProfileOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
-                   <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
-                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Saldo Marketplace</p>
-                     <p className="text-sm font-black text-green-600 dark:text-emerald-400">
-                       {formatPrice(user?.balance || 0)}
-                     </p>
-                     <div className="flex items-center gap-1.5 mt-2">
-                       <div className={`w-1.5 h-1.5 rounded-full ${user?.wallet_address ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                       <p className="text-[9px] font-bold text-gray-400 uppercase truncate">
-                         {user?.wallet_address ? `Linked: ${user.wallet_address.slice(0,6)}...${user.wallet_address.slice(-4)}` : 'Wallet not linked'}
-                       </p>
-                     </div>
+                <div className={`absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl transition-opacity duration-150 overflow-hidden z-50 ${isProfileOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+                   <div className="px-3 py-2.5 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Saldo</p>
+                     <p className="text-sm font-black text-green-600 dark:text-emerald-400">{formatPrice(user?.balance || 0)}</p>
                    </div>
-                   <Link to="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors">
-                     <User size={16} /> <span className="text-sm font-semibold">Pengaturan Akun</span>
+                   <Link to="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors text-sm font-medium">
+                     <User size={15} /> Pengaturan Akun
                    </Link>
-                   <Link to={`/shop/${user?.username || user?.id}`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors">
-                     <Home size={16} /> <span className="text-sm font-semibold">Lihat Profile Saya</span>
+                   <Link to={`/shop/${user?.username || user?.id}`} onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors text-sm font-medium">
+                     <Home size={15} /> Lihat Profil
                    </Link>
-                   <Link to="/orders" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors">
-                     <Package size={16} /> <span className="text-sm font-semibold">Pesanan Saya</span>
+                   <Link to="/orders" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors text-sm font-medium">
+                     <Package size={15} /> Pesanan Saya
                    </Link>
-                   <Link to="/create-product" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors">
-                     <PlusSquare size={16} /> <span className="text-sm font-semibold">Tambah Produk</span>
+                   <Link to="/create-product" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors text-sm font-medium">
+                     <PlusSquare size={15} /> Tambah Produk
                    </Link>
                    <div className="border-t border-gray-200 dark:border-gray-800"></div>
-                   <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-600 dark:text-red-500 transition-colors text-left">
-                     <LogOut size={16} /> <span className="text-sm font-semibold">Keluar</span>
+                   <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-600 dark:text-red-500 transition-colors text-left text-sm font-medium">
+                     <LogOut size={15} /> Keluar
                    </button>
                 </div>
               </div>
@@ -163,46 +155,28 @@ export default function Navbar({ onCartOpen }) {
         </div>
       </div>
 
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-1 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.05)] transition-colors duration-300">
-        <div className="grid grid-cols-5 items-center h-16">
-          <Link to="/home" className="relative flex flex-col items-center justify-center w-full h-full">
-            <div className={`flex items-center justify-center transition-all duration-300 z-10 ${isActive('/home') ? '-translate-y-4 w-11 h-11 bg-green-600 dark:bg-green-500 text-white rounded-full shadow-lg border-4 border-white dark:border-gray-900' : 'translate-y-1 w-10 h-10 text-gray-500 dark:text-gray-400 bg-transparent'}`}>
-              <Home size={20} fill={isActive('/home') ? 'currentColor' : 'none'} />
-            </div>
-            <span className={`absolute bottom-1 text-[9px] font-bold uppercase tracking-wider text-green-600 dark:text-emerald-400 transition-all duration-300 ${isActive('/home') ? 'translate-y-0 opacity-100 visible' : 'translate-y-4 opacity-0 invisible'}`}>Home</span>
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 px-1 pb-safe">
+        <div className="grid grid-cols-5 items-center h-14">
+          <Link to="/home" className="flex flex-col items-center justify-center gap-0.5">
+            <Home size={20} className={isActive('/home') ? 'text-green-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'} fill={isActive('/home') ? 'currentColor' : 'none'} />
+            <span className={`text-[9px] font-bold ${isActive('/home') ? 'text-green-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>Home</span>
           </Link>
-
-          <Link to="/feed" className="relative flex flex-col items-center justify-center w-full h-full">
-            <div className={`flex items-center justify-center transition-all duration-300 z-10 ${isActive('/feed') ? '-translate-y-4 w-11 h-11 bg-green-600 dark:bg-green-500 text-white rounded-full shadow-lg border-4 border-white dark:border-gray-900' : 'translate-y-1 w-10 h-10 text-gray-500 dark:text-gray-400 bg-transparent'}`}>
-              <svg className="w-5 h-5" fill={isActive('/feed') ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
-            </div>
-            <span className={`absolute bottom-1 text-[9px] font-bold uppercase tracking-wider text-green-600 dark:text-emerald-400 transition-all duration-300 ${isActive('/feed') ? 'translate-y-0 opacity-100 visible' : 'translate-y-4 opacity-0 invisible'}`}>Feed</span>
+          <Link to="/feed" className="flex flex-col items-center justify-center gap-0.5">
+            <svg className="w-5 h-5" fill={isActive('/feed') ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+            <span className={`text-[9px] font-bold ${isActive('/feed') ? 'text-green-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>Feed</span>
           </Link>
-
-          <Link to="/create-product" className="relative flex flex-col items-center justify-center w-full h-full">
-            <div className={`flex items-center justify-center transition-all duration-300 z-10 ${isActive('/create-product') ? '-translate-y-4 w-11 h-11 bg-green-600 dark:bg-green-500 text-white rounded-full shadow-lg border-4 border-white dark:border-gray-900' : 'translate-y-1 w-10 h-10 text-gray-500 dark:text-gray-400 bg-transparent'}`}>
-              <PlusSquare size={20} fill={isActive('/create-product') ? 'currentColor' : 'none'} />
-            </div>
-            <span className={`absolute bottom-1 text-[9px] font-bold uppercase tracking-wider text-green-600 dark:text-emerald-400 transition-all duration-300 ${isActive('/create-product') ? 'translate-y-0 opacity-100 visible' : 'translate-y-4 opacity-0 invisible'}`}>Jual</span>
+          <Link to="/create-product" className="flex flex-col items-center justify-center gap-0.5">
+            <PlusSquare size={20} className={isActive('/create-product') ? 'text-green-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'} fill={isActive('/create-product') ? 'currentColor' : 'none'} />
+            <span className={`text-[9px] font-bold ${isActive('/create-product') ? 'text-green-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>Jual</span>
           </Link>
-
-          <Link to="/chat" className="relative flex flex-col items-center justify-center w-full h-full">
-            <div className={`relative flex items-center justify-center transition-all duration-300 z-10 ${isActive('/chat') ? '-translate-y-4 w-11 h-11 bg-green-600 dark:bg-green-500 text-white rounded-full shadow-lg border-4 border-white dark:border-gray-900' : 'translate-y-1 w-10 h-10 text-gray-500 dark:text-gray-400 bg-transparent'}`}>
-              <MessageCircle size={20} fill={isActive('/chat') ? 'currentColor' : 'none'} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[9px] text-white flex items-center justify-center font-bold border border-white dark:border-gray-900">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </div>
-            <span className={`absolute bottom-1 text-[9px] font-bold uppercase tracking-wider text-green-600 dark:text-emerald-400 transition-all duration-300 ${isActive('/chat') ? 'translate-y-0 opacity-100 visible' : 'translate-y-4 opacity-0 invisible'}`}>Chat</span>
+          <Link to="/chat" className="flex flex-col items-center justify-center gap-0.5 relative">
+            <MessageCircle size={20} className={isActive('/chat') ? 'text-green-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'} fill={isActive('/chat') ? 'currentColor' : 'none'} />
+            {unreadCount > 0 && <span className="absolute top-1 right-3 w-3 h-3 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-bold">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            <span className={`text-[9px] font-bold ${isActive('/chat') ? 'text-green-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>Chat</span>
           </Link>
-
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="relative flex flex-col items-center justify-center w-full h-full">
-            <div className={`flex items-center justify-center transition-all duration-300 z-10 ${isMobileMenuOpen ? '-translate-y-4 w-11 h-11 bg-green-600 dark:bg-green-500 text-white rounded-full shadow-lg border-4 border-white dark:border-gray-900' : 'translate-y-1 w-10 h-10 text-gray-500 dark:text-gray-400 bg-transparent'}`}>
-              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-            </div>
-            <span className={`absolute bottom-1 text-[9px] font-bold uppercase tracking-wider text-green-600 dark:text-emerald-400 transition-all duration-300 ${isMobileMenuOpen ? 'translate-y-0 opacity-100 visible' : 'translate-y-4 opacity-0 invisible'}`}>Menu</span>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="flex flex-col items-center justify-center gap-0.5">
+            {isMobileMenuOpen ? <X size={20} className="text-green-600 dark:text-emerald-400" /> : <Menu size={20} className="text-gray-400 dark:text-gray-500" />}
+            <span className={`text-[9px] font-bold ${isMobileMenuOpen ? 'text-green-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>Menu</span>
           </button>
         </div>
       </div>

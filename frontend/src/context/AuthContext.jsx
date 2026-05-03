@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }) => {
           // Token expired or invalid
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          setUser(null);
+          if (!cancelled) setUser(null);
         } else if (!err.response) {
           toast.error('Server backend tidak terdeteksi.');
         }
@@ -68,6 +68,29 @@ export const AuthProvider = ({ children }) => {
       safeSetLoading(true);
       try {
         const hashHasToken = window.location.hash.includes('access_token=');
+        const localToken = localStorage.getItem('token');
+        const cachedUser = localStorage.getItem('user');
+
+        // Fast path: show cached user immediately (no network wait)
+        if (localToken && cachedUser && !hashHasToken) {
+          try {
+            const parsed = JSON.parse(cachedUser);
+            if (!cancelled) {
+              setUser(parsed);
+              safeSetLoading(false);
+            }
+          } catch { /* corrupt cache, continue normal flow */ }
+
+          // Verify token in background (non-blocking)
+          fetchUserByToken(localToken).catch(() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            if (!cancelled) setUser(null);
+          });
+          return;
+        }
+
+        // Supabase session check (for Google OAuth returning users)
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -78,7 +101,6 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        const localToken = localStorage.getItem('token');
         if (localToken) {
           await fetchUserByToken(localToken);
           safeSetLoading(false);
@@ -112,7 +134,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+      if (event === 'SIGNED_IN' && session) {
         clearOauthTimer();
         await applySessionUser(session);
         stripAuthHash();
@@ -122,13 +144,9 @@ export const AuthProvider = ({ children }) => {
 
       if (event === 'SIGNED_OUT') {
         clearOauthTimer();
-        const wasSupabaseAuth = !localStorage.getItem('token') || (session === null && event === 'SIGNED_OUT');
-        // Hanya hapus jika memang sedang proses logout
-        if (event === 'SIGNED_OUT') {
-           localStorage.removeItem('token');
-           localStorage.removeItem('user');
-           setUser(null);
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
         safeSetLoading(false);
       }
     });
@@ -145,8 +163,20 @@ export const AuthProvider = ({ children }) => {
 
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
-
     setUser(data.user);
+
+    // Sync Supabase session so onAuthStateChange & token refresh work
+    try {
+      if (data.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: data.token,
+          refresh_token: data.refresh_token,
+        });
+      }
+    } catch (e) {
+      console.warn('Supabase session sync skipped:', e.message);
+    }
+
     return data;
   };
 

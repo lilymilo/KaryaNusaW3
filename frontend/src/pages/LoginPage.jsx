@@ -15,7 +15,6 @@ export default function LoginPage() {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [walletLoading, setWalletLoading] = useState(null);
-  const [showWalletModal, setShowWalletModal] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -154,43 +153,23 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="space-y-3 relative z-10">
-            {!showWalletModal ? (
-              <button
-                type="button"
-                onClick={() => setShowWalletModal(true)}
-                className="w-full flex items-center justify-center gap-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 py-4 px-6 rounded-2xl text-gray-900 dark:text-white font-black transition-all active:scale-[0.98] hover:shadow-md"
-              >
-                <Wallet size={20} className="text-gray-600 dark:text-gray-300" />
-                <span>Pilih Penyedia Wallet</span>
-              </button>
-            ) : (
-              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3 shadow-inner">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Pilih Web3 Wallet</span>
-                  <button onClick={() => setShowWalletModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                    <ArrowLeft size={16} />
-                  </button>
+          <div className="relative z-10">
+            <button
+              id="login-metamask-btn"
+              onClick={() => handleWalletLogin(WALLET_TYPES.METAMASK)}
+              disabled={walletLoading !== null}
+              className="w-full relative overflow-hidden flex items-center justify-center gap-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-gray-200 dark:border-gray-700 py-3.5 rounded-xl text-gray-900 dark:text-white font-bold transition-all shadow-sm active:scale-[0.98] group disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              {walletLoading === WALLET_TYPES.METAMASK ? (
+                <Loader2 size={20} className="animate-spin text-orange-500 relative z-10" />
+              ) : (
+                <div className="group-hover:scale-110 transition-transform relative z-10 w-5 h-5 flex items-center justify-center">
+                  <MetaMaskIcon />
                 </div>
-                <button
-                  id="login-metamask-btn"
-                  onClick={() => handleWalletLogin(WALLET_TYPES.METAMASK)}
-                  disabled={walletLoading !== null}
-                  className="w-full flex items-center justify-center gap-4 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 hover:from-orange-100 hover:to-amber-100 dark:hover:from-orange-900/40 dark:hover:to-amber-900/40 border border-orange-200 dark:border-orange-800/50 py-3 px-4 rounded-xl text-gray-900 dark:text-white font-black transition-all active:scale-[0.98] group disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {walletLoading === WALLET_TYPES.METAMASK ? (
-                    <Loader2 size={24} className="animate-spin text-orange-500" />
-                  ) : (
-                    <div className="group-hover:scale-110 transition-transform">
-                      <MetaMaskIcon />
-                    </div>
-                  )}
-                  <span>{walletLoading === WALLET_TYPES.METAMASK ? 'Menghubungkan...' : 'MetaMask'}</span>
-                  <span className="ml-auto text-[10px] uppercase tracking-wider font-bold text-orange-500/70 dark:text-orange-400/70">EVM</span>
-                </button>
-
-              </div>
-            )}
+              )}
+              <span className="relative z-10">{walletLoading === WALLET_TYPES.METAMASK ? 'Menghubungkan...' : 'Lanjut dengan MetaMask'}</span>
+            </button>
           </div>
 
           <div className="mt-10 text-center relative z-10">

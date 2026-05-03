@@ -31,7 +31,12 @@ import { formatPrice } from '../utils/format';
 export default function ProfilePage() {
   const { user, updateUserData, linkWallet } = useAuth();
   const { connectWallet, walletAddress, signMessage, disconnectWallet } = useWallet();
-  const [activeTab, setActiveTab] = useState('akun');
+  const validTabs = ['akun', 'toko', 'wishlist', 'produk', 'statistik', 'dompet'];
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    return validTabs.includes(tab) ? tab : 'akun';
+  });
   const [loading, setLoading] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -122,8 +127,12 @@ export default function ProfilePage() {
     if (activeTab === 'produk') fetchMyProducts();
     if (activeTab === 'statistik') { fetchStats(); fetchIncomingOrders(); }
     if (activeTab === 'dompet') fetchPayouts();
-    fetchSocialStats();
   }, [activeTab, user?.id]);
+
+  // Social stats only need to be fetched once on mount, not every tab change
+  useEffect(() => {
+    if (user?.id) fetchSocialStats();
+  }, [user?.id]);
 
   const fetchWishlist = async () => {
     try {
@@ -256,6 +265,9 @@ export default function ProfilePage() {
   const handleFileChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
+      // Revoke old blob URL to prevent memory leak
+      const oldUrl = previews[field];
+      if (oldUrl && oldUrl.startsWith('blob:')) URL.revokeObjectURL(oldUrl);
       setFiles(prev => ({ ...prev, [field]: file }));
       setPreviews(prev => ({ ...prev, [field]: URL.createObjectURL(file) }));
     }
@@ -297,96 +309,89 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 pb-32">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
       <Navbar onCartOpen={() => setCartOpen(true)} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
 
-      <div className="pt-20 bg-gradient-to-b from-green-50 to-gray-50 dark:from-green-900/10 dark:to-gray-950 border-b border-gray-200 dark:border-gray-800 transition-colors">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center gap-5 py-8 pb-10">
-          <div className="relative group">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-white dark:border-gray-800 shadow-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+      <div className="pt-14 bg-gradient-to-b from-green-50 to-gray-50 dark:from-green-900/10 dark:to-gray-950 border-b border-gray-200 dark:border-gray-800 transition-colors">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center gap-3 py-3">
+          <div className="relative">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-3 border-white dark:border-gray-800 shadow-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
               {previews.avatar ? (
                 <img src={previews.avatar} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <User size={48} className="text-gray-400 dark:text-gray-500" />
+                <User size={36} className="text-gray-400 dark:text-gray-500" />
               )}
             </div>
-            <label className="absolute bottom-1 right-1 p-2 bg-green-600 rounded-full text-white cursor-pointer hover:bg-green-700 transition-colors shadow-lg border-2 border-white dark:border-gray-800">
-              <Camera size={18} />
+            <label className="absolute bottom-0 right-0 p-1.5 bg-green-600 rounded-full text-white cursor-pointer hover:bg-green-700 transition-colors shadow-lg border-2 border-white dark:border-gray-800">
+              <Camera size={14} />
               <input type="file" className="hidden" onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" />
             </label>
           </div>
           <div className="text-center md:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{user?.full_name}</h1>
-            <p className="text-gray-500 text-sm font-medium mb-3">@{user?.username || 'user'}</p>
-            
-            <div className="flex items-center justify-center md:justify-start gap-4">
-              <button 
-                onClick={() => setModalType('followers')}
-                className="flex items-center gap-1.5 hover:text-green-600 transition-colors"
-              >
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{user?.full_name}</h1>
+            <p className="text-gray-500 text-xs font-medium mb-1.5">@{user?.username || 'user'}</p>
+            <div className="flex items-center justify-center md:justify-start gap-3 text-sm">
+              <button onClick={() => setModalType('followers')} className="flex items-center gap-1 hover:text-green-600 transition-colors">
                 <span className="font-bold text-gray-900 dark:text-white">{socialStats.followers}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">Pengikut</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Pengikut</span>
               </button>
               <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
-              <button 
-                onClick={() => setModalType('following')}
-                className="flex items-center gap-1.5 hover:text-green-600 transition-colors"
-              >
+              <button onClick={() => setModalType('following')} className="flex items-center gap-1 hover:text-green-600 transition-colors">
                 <span className="font-bold text-gray-900 dark:text-white">{socialStats.following}</span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">Mengikuti</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Mengikuti</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          <div className="w-full lg:w-64 flex-shrink-0 z-20 sticky top-16 lg:top-24">
-            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible scrollbar-hide border border-gray-200 dark:border-gray-700 shadow-sm transition-colors scroll-smooth snap-x snap-mandatory">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 sm:pb-6">
+        <div className="flex flex-col lg:flex-row gap-4 pt-3">
+          <div className="w-full lg:w-48 flex-shrink-0 z-20 lg:sticky lg:top-[60px] lg:self-start">
+            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl p-1.5 flex lg:flex-col gap-0.5 overflow-x-auto lg:overflow-x-visible scrollbar-hide border border-gray-200 dark:border-gray-700 shadow-sm transition-colors scroll-smooth snap-x snap-mandatory">
               <button 
                 onClick={() => setActiveTab('akun')}
-                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'akun' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                <User size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Akun</span>
+                className={`flex-shrink-0 lg:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'akun' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <User size={18} /> <span className="whitespace-nowrap">Akun</span>
               </button>
               
               <button 
                 onClick={() => setActiveTab('toko')}
-                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'toko' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                <Home size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Toko</span>
+                className={`flex-shrink-0 lg:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'toko' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <Home size={18} /> <span className="whitespace-nowrap">Toko</span>
               </button>
 
               <button 
                 onClick={() => setActiveTab('wishlist')}
-                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'wishlist' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                <Heart size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Wishlist</span>
+                className={`flex-shrink-0 lg:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'wishlist' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <Heart size={18} /> <span className="whitespace-nowrap">Wishlist</span>
               </button>
 
               <button 
                 onClick={() => setActiveTab('produk')}
-                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'produk' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                <Package size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Produk</span>
+                className={`flex-shrink-0 lg:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'produk' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <Package size={18} /> <span className="whitespace-nowrap">Produk</span>
               </button>
               
               <button 
                 onClick={() => setActiveTab('statistik')}
-                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'statistik' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                <TrendingUp size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Statistik</span>
+                className={`flex-shrink-0 lg:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'statistik' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <TrendingUp size={18} /> <span className="whitespace-nowrap">Statistik</span>
               </button>
 
               <button 
                 onClick={() => setActiveTab('dompet')}
-                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'dompet' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
-                <Wallet size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Saldo & Dompet</span>
+                className={`flex-shrink-0 lg:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'dompet' ? 'btn-primary text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+                <Wallet size={18} /> <span className="whitespace-nowrap">Saldo & Dompet</span>
               </button>
 
               <div className="w-px lg:w-full h-8 lg:h-px bg-gray-200 dark:bg-gray-700 my-1 lg:my-2 mx-2 lg:mx-0 shrinks-0"></div>
 
               <button 
                 onClick={() => navigate(`/shop/${user?.username || user?.id}`)}
-                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700`}>
-                <ExternalLink size={20} /> <span className="text-sm lg:text-base whitespace-nowrap">Lihat Profil Saya</span>
+                className={`flex-shrink-0 lg:w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700`}>
+                <ExternalLink size={18} /> <span className="whitespace-nowrap">Lihat Profil</span>
               </button>
             </div>
           </div>
@@ -408,93 +413,102 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'akun' && (
-              <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                  <User className="text-green-600" /> Data Pribadi
-                </h2>
-                <form onSubmit={handleUpdateProfile} className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Nama Lengkap</label>
-                      <input type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})}
-                        className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Username</label>
-                      <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})}
-                        className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Email</label>
-                      <input type="email" value={user?.email} disabled
-                        className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-500 dark:text-gray-400 cursor-not-allowed font-medium" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Nomor HP</label>
-                      <input type="text" value={formData.phone_number} onChange={e => setFormData({...formData, phone_number: e.target.value})}
-                        className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
-                    </div>
-                  </div>
-                  <button type="submit" disabled={loading} className="btn-primary w-full sm:w-auto px-8 py-3 rounded-xl text-white font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-sm">
-                    {loading ? 'Menyimpan...' : <><Save size={18} /> Simpan Perubahan</>}
-                  </button>
-                </form>
-
-                <div className="mt-10 border-t border-gray-200 dark:border-gray-700 pt-8 mt-8">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <User className="text-green-600" /> Pengaturan Password
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-6">Atur password (Min. 8 karakter, Kombinasi Huruf Besar, Huruf Kecil, Angka & Simbol) untuk login manual dengan Alamat Wallet / Username Anda tanpa perlu koneksi MetaMask.</p>
-                  
-                  <form onSubmit={handleUpdatePassword} className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Password Baru</label>
-                        <div className="relative">
-                          <input type={showPass ? "text" : "password"} value={passwordForm.new_password} onChange={e => setPasswordForm({...passwordForm, new_password: e.target.value})} placeholder="Kombinasi Karakter Kuat"
-                            className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 pr-12 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
-                          <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* Data Pribadi */}
+                <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <User size={18} className="text-green-600" /> Data Pribadi
+                  </h2>
+                  <form onSubmit={handleUpdateProfile} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Nama Lengkap</label>
+                        <input type="text" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})}
+                          className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Konfirmasi Password</label>
-                        <div className="relative">
-                          <input type={showConf ? "text" : "password"} value={passwordForm.confirm_password} onChange={e => setPasswordForm({...passwordForm, confirm_password: e.target.value})} placeholder="Ketik ulang password"
-                            className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 pr-12 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
-                          <button type="button" onClick={() => setShowConf(!showConf)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            {showConf ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Username</label>
+                        <input type="text" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})}
+                          className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Email</label>
+                        <input type="email" value={user?.email} disabled
+                          className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed font-medium" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Nomor HP</label>
+                        <input type="text" value={formData.phone_number} onChange={e => setFormData({...formData, phone_number: e.target.value})}
+                          className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
                       </div>
                     </div>
-
-                    {passwordForm.new_password && (
-                      <div className="grid grid-cols-2 gap-2 mt-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-                        {validations.map((v, i) => (
-                          <div key={i} className={`flex items-center gap-1.5 text-[10px] sm:text-xs font-bold transition-colors ${v.valid ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
-                            {v.valid ? <Check size={14} /> : <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 ml-1 mr-1" />}
-                            {v.label}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <button type="submit" disabled={passwordLoading} className="btn-primary w-full sm:w-auto px-8 py-3 rounded-xl text-white font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-sm">
-                      {passwordLoading ? 'Menyimpan...' : <><Check size={18} /> Simpan Password</>}
+                    <button type="submit" disabled={loading} className="btn-primary w-full sm:w-auto px-6 py-2.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-sm">
+                      {loading ? 'Menyimpan...' : <><Save size={16} /> Simpan Perubahan</>}
                     </button>
                   </form>
                 </div>
 
-                <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-8">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Settings className="text-green-600" /> Preferensi Tampilan
-                  </h3>
-                  <div className="flex items-center justify-between p-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
-                    <div className="space-y-1">
-                      <p className="font-bold text-gray-900 dark:text-white text-sm">Mode Aplikasi</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium tracking-wide">Pilih antara mode terang atau gelap untuk kenyamanan mata Anda.</p>
+                {/* Password — collapsible */}
+                <details className="group bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+                  <summary className="p-5 sm:p-6 font-bold text-gray-900 dark:text-white flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden outline-none select-none">
+                    <span className="flex items-center gap-2 text-base">
+                      <User size={18} className="text-green-600" /> Pengaturan Password
+                    </span>
+                    <svg className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform duration-200 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </summary>
+                  <div className="px-5 sm:px-6 pb-5 sm:pb-6 border-t border-gray-100 dark:border-gray-800 pt-4">
+                    <p className="text-xs text-gray-500 mb-4 leading-relaxed">Atur password untuk login manual dengan Wallet / Username tanpa MetaMask. Min. 8 karakter, kombinasi huruf besar-kecil, angka & simbol.</p>
+                    <form onSubmit={handleUpdatePassword} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Password Baru</label>
+                          <div className="relative">
+                            <input type={showPass ? "text" : "password"} value={passwordForm.new_password} onChange={e => setPasswordForm({...passwordForm, new_password: e.target.value})} placeholder="Kombinasi Karakter Kuat"
+                              className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 pr-11 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
+                            <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                              {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Konfirmasi Password</label>
+                          <div className="relative">
+                            <input type={showConf ? "text" : "password"} value={passwordForm.confirm_password} onChange={e => setPasswordForm({...passwordForm, confirm_password: e.target.value})} placeholder="Ketik ulang password"
+                              className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 pr-11 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
+                            <button type="button" onClick={() => setShowConf(!showConf)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                              {showConf ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {passwordForm.new_password && (
+                        <div className="grid grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700">
+                          {validations.map((v, i) => (
+                            <div key={i} className={`flex items-center gap-1.5 text-[10px] sm:text-xs font-bold transition-colors ${v.valid ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                              {v.valid ? <Check size={14} /> : <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 ml-1 mr-1" />}
+                              {v.label}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <button type="submit" disabled={passwordLoading} className="btn-primary w-full sm:w-auto px-6 py-2.5 rounded-xl text-white text-sm font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-sm">
+                        {passwordLoading ? 'Menyimpan...' : <><Check size={16} /> Simpan Password</>}
+                      </button>
+                    </form>
+                  </div>
+                </details>
+
+                {/* Preferensi Tampilan — inline compact */}
+                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+                  <div className="flex items-center justify-between p-5 sm:p-6">
+                    <div className="flex items-center gap-3">
+                      <Settings size={18} className="text-green-600 shrink-0" />
+                      <div>
+                        <p className="font-bold text-gray-900 dark:text-white text-sm">Mode Tampilan</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Terang / Gelap</p>
+                      </div>
                     </div>
                     <ThemeToggle />
                   </div>
@@ -503,14 +517,14 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'toko' && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="bg-white dark:bg-gray-900 shadow-sm rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700 transition-colors">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                    <Home className="text-green-600" /> Pengaturan Toko
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-4 sm:p-5 border border-gray-200 dark:border-gray-700 transition-colors">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Home size={18} className="text-green-600" /> Pengaturan Toko
                   </h2>
-                  <form onSubmit={handleUpdateProfile} className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="relative h-40 w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 group transition-colors">
+                  <form onSubmit={handleUpdateProfile} className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="relative h-28 w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 group transition-colors">
                         {previews.shop_banner ? (
                           <img src={previews.shop_banner} className="w-full h-full object-cover" />
                         ) : (
@@ -524,8 +538,8 @@ export default function ProfilePage() {
                         </label>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row gap-6">
-                        <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-4 border-white dark:border-gray-800 shadow-md flex-shrink-0 group">
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-3 border-white dark:border-gray-800 shadow-md flex-shrink-0 group">
                           {previews.avatar ? (
                             <img src={previews.avatar} className="w-full h-full object-cover bg-white dark:bg-gray-800" />
                           ) : (
@@ -537,34 +551,34 @@ export default function ProfilePage() {
                           </div>
                         </div>
                         
-                        <div className="flex-1 space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Nama Toko</label>
+                        <div className="flex-1 space-y-3">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Nama Toko</label>
                             <input type="text" value={formData.shop_name} onChange={e => setFormData({...formData, shop_name: e.target.value})}
-                              className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
+                              className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Deskripsi Toko</label>
-                            <textarea rows={3} value={formData.shop_description} onChange={e => setFormData({...formData, shop_description: e.target.value})}
-                              className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all resize-none font-medium" />
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Deskripsi Toko</label>
+                            <textarea rows={2} value={formData.shop_description} onChange={e => setFormData({...formData, shop_description: e.target.value})}
+                              className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all resize-none font-medium" />
                           </div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Link Website / Portofolio</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Link Website / Portofolio</label>
                           <input type="text" placeholder="https://..." value={formData.shop_address} onChange={e => setFormData({...formData, shop_address: e.target.value})}
-                            className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
+                            className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-bold text-gray-500 dark:text-gray-400">Kontak (WA/Email Toko)</label>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-gray-500 dark:text-gray-400">Kontak (WA/Email Toko)</label>
                           <input type="text" value={formData.shop_contact} onChange={e => setFormData({...formData, shop_contact: e.target.value})}
-                            className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
+                            className="w-full bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
                         </div>
                       </div>
                     </div>
-                    <button type="submit" disabled={loading} className="btn-primary px-8 py-3 rounded-xl text-white font-bold transition-all hover:scale-[1.02] shadow-sm">
+                    <button type="submit" disabled={loading} className="btn-primary px-6 py-2 rounded-xl text-white text-sm font-bold transition-all hover:scale-[1.02] shadow-sm">
                        Simpan Pengaturan Toko
                     </button>
                   </form>
@@ -574,25 +588,25 @@ export default function ProfilePage() {
 
             {activeTab === 'wishlist' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Heart className="text-red-500" fill="currentColor" /> Wishlist Saya
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Heart size={18} className="text-red-500" fill="currentColor" /> Wishlist Saya
                   </h2>
                 </div>
                 {wishlist.length === 0 ? (
-                  <div className="bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700 rounded-3xl p-12 text-center transition-colors">
-                    <Heart size={48} className="text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400 font-medium mb-4">Belum ada wishlist. Ayo cari produk favoritmu!</p>
+                  <div className="bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center transition-colors">
+                    <Heart size={36} className="text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-3">Belum ada wishlist.</p>
                   </div>
                 ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {wishlist.filter(item => (item.products || item.product)).map(item => {
                     const p = item.products || item.product;
                     return (
                       <div key={item.id} 
-                        onClick={() => navigate(`/product/${p.id}`)}
-                        className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 flex items-center gap-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-green-300 dark:hover:border-emerald-500 transition-all group">
-                        <img src={p.image} className="w-16 h-16 rounded-lg object-cover border border-gray-100 dark:border-gray-800 group-hover:scale-105 transition-transform" />
+                        onClick={() => navigate(`/home`)}
+                        className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-2.5 flex items-center gap-3 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-green-300 dark:hover:border-emerald-500 transition-all group">
+                        <img src={p.image} className="w-12 h-12 rounded-lg object-cover border border-gray-100 dark:border-gray-800 group-hover:scale-105 transition-transform" />
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-gray-900 dark:text-white truncate text-sm sm:text-base">{p.name}</h4>
                           <p className="text-green-600 dark:text-emerald-400 font-bold text-sm">{formatPrice(p.price)}</p>
@@ -625,21 +639,21 @@ export default function ProfilePage() {
 
             {activeTab === 'produk' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Package className="text-blue-500" /> Koleksi Produk Anda
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Package size={18} className="text-blue-500" /> Koleksi Produk
                   </h2>
-                  <button onClick={() => navigate('/create-product')} className="btn-primary px-4 py-2 rounded-xl text-white text-sm font-bold flex items-center gap-2 shadow-sm">
+                  <button onClick={() => navigate('/create-product')} className="btn-primary px-3 py-1.5 rounded-lg text-white text-xs font-bold flex items-center gap-1.5 shadow-sm">
                     <Plus size={16} /> Tambah Baru
                   </button>
                 </div>
                 {myProducts.length === 0 ? (
-                  <div className="bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700 rounded-3xl p-12 text-center transition-colors">
-                    <Package size={48} className="text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400 font-medium">Anda belum memiliki produk.</p>
+                  <div className="bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center transition-colors">
+                    <Package size={36} className="text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Belum ada produk.</p>
                   </div>
                 ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {selected && (
                     <Suspense fallback={null}>
                       <ProductModal 
@@ -653,8 +667,8 @@ export default function ProfilePage() {
                   {myProducts.map(p => (
                     <div key={p.id} 
                       onClick={() => setSelected(p)}
-                      className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 flex items-center gap-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-green-300 dark:hover:border-emerald-500 transition-all group">
-                      <img src={p.image} className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border border-gray-100 dark:border-gray-800 group-hover:scale-105 transition-transform" />
+                      className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-2.5 flex items-center gap-3 border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-green-300 dark:hover:border-emerald-500 transition-all group">
+                      <img src={p.image} className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover border border-gray-100 dark:border-gray-800 group-hover:scale-105 transition-transform" />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-1">
                           <h4 className="font-bold text-gray-900 dark:text-white truncate text-sm sm:text-lg">{p.name}</h4>
@@ -663,13 +677,14 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3">
                           <p className="text-green-600 dark:text-emerald-400 font-bold text-sm sm:text-base">{formatPrice(p.price)}</p>
                           <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded-md">
-                            <span>📦 Stok: <b>{p.stock !== null && p.stock !== undefined ? p.stock : '∞'}</b></span>
-                            <span className="w-px h-2 bg-gray-300 dark:bg-gray-700"></span>
-                            <span>📈 Terjual: <b>{p.sold}</b></span>
+                            <span>📈 Terjual: <b>{p.sold || 0}</b></span>
                           </div>
                         </div>
                       </div>
                       <div className="flex gap-1 sm:gap-2">
+                        <button onClick={(e) => { e.stopPropagation(); setActiveTab('statistik'); }} className="p-2 sm:p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-gray-700 rounded-xl transition-all shadow-sm" title="Lihat Statistik">
+                          <TrendingUp size={18} />
+                        </button>
                         <button onClick={(e) => { e.stopPropagation(); navigate(`/edit-product/${p.id}`); }} className="p-2 sm:p-2.5 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-emerald-400 hover:bg-green-50 dark:hover:bg-green-900/30 border border-gray-200 dark:border-gray-700 rounded-xl transition-all shadow-sm">
                           <Edit size={18} />
                         </button>
@@ -685,35 +700,35 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'statistik' && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                  <TrendingUp className="text-green-600" /> Analisis Performa
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <TrendingUp size={18} className="text-green-600" /> Analisis Performa
                 </h2>
                 
                 {stats ? (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-5 border border-gray-200 dark:border-gray-700 border-l-4 border-l-green-600 dark:border-l-emerald-500 transition-colors">
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Total Pendapatan</p>
-                        <p className="text-xl font-black text-gray-900 dark:text-white">{formatPrice(stats.totalRevenue)}</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 border border-gray-200 dark:border-gray-700 border-l-4 border-l-green-600 dark:border-l-emerald-500 transition-colors">
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">Total Pendapatan</p>
+                        <p className="text-base font-black text-gray-900 dark:text-white">{formatPrice(stats.totalRevenue)}</p>
                       </div>
-                      <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-5 border border-gray-200 dark:border-gray-700 border-l-4 border-l-blue-500 transition-colors">
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Produk Terjual</p>
-                        <p className="text-xl font-black text-gray-900 dark:text-white">{stats.totalSold} Item</p>
+                      <div className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 border border-gray-200 dark:border-gray-700 border-l-4 border-l-blue-500 transition-colors">
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">Produk Terjual</p>
+                        <p className="text-base font-black text-gray-900 dark:text-white">{stats.totalSold} Item</p>
                       </div>
-                      <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-5 border border-gray-200 dark:border-gray-700 border-l-4 border-l-orange-500 transition-colors">
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Pesanan Aktif</p>
-                        <p className="text-xl font-black text-gray-900 dark:text-white">{stats.activeOrders}</p>
+                      <div className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 border border-gray-200 dark:border-gray-700 border-l-4 border-l-orange-500 transition-colors">
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">Pesanan Aktif</p>
+                        <p className="text-base font-black text-gray-900 dark:text-white">{stats.activeOrders}</p>
                       </div>
-                      <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-5 border border-gray-200 dark:border-gray-700 border-l-4 border-l-cyan-500 transition-colors">
-                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Total Produk</p>
-                        <p className="text-xl font-black text-gray-900 dark:text-white">{stats.totalProducts}</p>
+                      <div className="bg-white dark:bg-gray-900 shadow-sm rounded-xl p-3 border border-gray-200 dark:border-gray-700 border-l-4 border-l-cyan-500 transition-colors">
+                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">Total Produk</p>
+                        <p className="text-base font-black text-gray-900 dark:text-white">{stats.totalProducts}</p>
                       </div>
                     </div>
 
-                     <div className="bg-white dark:bg-gray-900 shadow-sm rounded-3xl p-6 sm:p-8 mt-6 border border-gray-200 dark:border-gray-700 transition-colors">
-                      <h3 className="font-bold text-gray-900 dark:text-white mb-6">Produk Terlaris Anda</h3>
-                      <div className="space-y-4">
+                     <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-4 sm:p-5 mt-4 border border-gray-200 dark:border-gray-700 transition-colors">
+                      <h3 className="font-bold text-sm text-gray-900 dark:text-white mb-3">Produk Terlaris</h3>
+                      <div className="space-y-2">
                         {stats.bestSellers.map((item, i) => (
                           <div key={i} className="flex items-center justify-between group">
                             <div className="flex items-center gap-3">
@@ -722,7 +737,7 @@ export default function ProfilePage() {
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-black text-gray-900 dark:text-white">{item.sold} kali</p>
-                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Stok sisa: {item.stock !== null && item.stock !== undefined ? item.stock : '∞'}</p>
+                              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Total terjual: {item.sold || 0}</p>
                             </div>
                           </div>
                         ))}
@@ -730,18 +745,18 @@ export default function ProfilePage() {
                     </div>
                   </>
                 ) : (
-                  <div className="bg-white dark:bg-gray-900 shadow-sm rounded-3xl p-12 text-center border border-gray-200 dark:border-gray-700 text-gray-500 font-bold animate-pulse transition-colors">
+                  <div className="bg-white dark:bg-gray-900 shadow-sm rounded-2xl p-8 text-center border border-gray-200 dark:border-gray-700 text-gray-500 text-sm font-bold animate-pulse transition-colors">
                     Memuat statistik...
                   </div>
                 )}
 
                 {/* Daftar Pembeli */}
-                <details className="group bg-white dark:bg-gray-900 shadow-sm rounded-3xl border border-gray-200 dark:border-gray-700 transition-colors">
-                  <summary className="p-6 sm:p-8 font-bold text-gray-900 dark:text-white flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden outline-none">
+                <details className="group bg-white dark:bg-gray-900 shadow-sm rounded-2xl border border-gray-200 dark:border-gray-700 transition-colors">
+                  <summary className="p-4 sm:p-5 font-bold text-sm text-gray-900 dark:text-white flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden outline-none">
                     <span className="flex items-center gap-2"><Users size={18} className="text-green-600 dark:text-emerald-400" /> Riwayat Pembeli</span>
                     <svg className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </summary>
-                  <div className="px-6 sm:px-8 pb-6 sm:pb-8 border-t border-gray-100 dark:border-gray-800 pt-4">
+                  <div className="px-4 sm:px-5 pb-4 sm:pb-5 border-t border-gray-100 dark:border-gray-800 pt-3">
                   {incomingOrders.length === 0 ? (
                     <div className="text-center py-10">
                       <Users size={40} className="mx-auto text-gray-200 dark:text-gray-700 mb-3" />
@@ -788,13 +803,13 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'dompet' && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden">
-                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
+                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <p className="text-green-100 text-xs font-bold mb-1 uppercase tracking-wider">Saldo Tersedia</p>
-                      <h3 className="text-4xl font-black mb-1">{formatPrice(user?.balance || 0)}</h3>
-                      <div className="mt-4 flex items-center gap-2">
+                      <h3 className="text-2xl font-black mb-1">{formatPrice(user?.balance || 0)}</h3>
+                      <div className="mt-2 flex items-center gap-2">
                         <div className="bg-white/20 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-2">
                            <p className="text-[10px] font-bold text-green-50 uppercase">Status Dompet</p>
                            {user?.wallet_address ? (
@@ -810,7 +825,7 @@ export default function ProfilePage() {
                         <button onClick={() => { 
                           const el = document.getElementById('link-wallet-section');
                           el?.scrollIntoView({ behavior: 'smooth' });
-                        }} className="bg-white text-green-700 px-6 py-3 rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all flex items-center gap-2">
+                        }} className="bg-white text-green-700 px-4 py-2 rounded-xl font-bold text-sm shadow-xl active:scale-95 transition-all flex items-center gap-2">
                           <Link size={16} /> Hubungkan Wallet
                         </button>
                       )}
@@ -820,44 +835,44 @@ export default function ProfilePage() {
                   <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-green-400/20 rounded-full blur-2xl"></div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                  <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 sm:p-5 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
                     <form onSubmit={handleTransfer}>
-                      <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                        <Send size={20} className="text-blue-500" /> Kirim Saldo
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <Send size={16} className="text-blue-500" /> Kirim Saldo
                       </h4>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Username Penerima</label>
+                      <div className="space-y-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Username Penerima</label>
                           <div className="relative">
                             <span className="absolute left-4 top-3.5 text-gray-400 font-bold">@</span>
                             <input 
                               type="text" 
                               name="recipient"
                               placeholder="username_tujuan"
-                              className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-4 py-3 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 font-bold" />
+                              className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl pl-8 pr-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 font-bold" />
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nominal (IDR)</label>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Nominal (IDR)</label>
                           <input 
                             type="number" 
                             name="amount"
                             placeholder="Min. Rp 1.000"
                             min={1000}
-                            className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 font-bold" />
+                            className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 font-bold" />
                         </div>
                         <button 
                           disabled={transferLoading || (user?.balance || 0) < 1000}
-                          className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold shadow-md hover:bg-blue-700 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                          className="w-full py-2 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-md hover:bg-blue-700 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
                           {transferLoading ? <><RefreshCw size={16} className="animate-spin" /> Memproses...</> : <><Send size={16} /> Kirim Sekarang</>}
                         </button>
                       </div>
                     </form>
                   </div>
 
-                  <div id="link-wallet-section" className="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors md:col-span-2 lg:col-span-1">
+                  <div id="link-wallet-section" className="bg-white dark:bg-gray-900 rounded-2xl p-4 sm:p-5 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors md:col-span-2 lg:col-span-1">
                     {!user?.wallet_address ? (
                       <div className="text-center h-full flex flex-col justify-center">
                         <Link size={40} className="mx-auto text-gray-300 mb-4" />
@@ -875,29 +890,29 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <form onSubmit={handleWithdraw}>
-                        <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                          <Landmark size={20} className="text-green-600" /> Tarik Saldo
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                          <Landmark size={16} className="text-green-600" /> Tarik Saldo
                         </h4>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Alamat Tujuan</label>
+                        <div className="space-y-3">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Alamat Tujuan</label>
                             <div className="bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-3 font-mono text-xs break-all text-gray-600 dark:text-gray-400 font-bold">
                               {user.wallet_address}
                             </div>
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nominal Penarikan (IDR)</label>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Nominal Penarikan (IDR)</label>
                             <input 
                               type="number" 
                               name="amount"
                               placeholder="Min. Rp 10.000"
                               min={10000}
                               max={user.balance}
-                              className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:ring-1 focus:ring-green-500 font-bold" />
+                              className="w-full bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-1 focus:ring-green-500 font-bold" />
                           </div>
                           <button 
                             disabled={payoutLoading || (user?.balance || 0) < 10000}
-                            className="btn-primary w-full py-3 rounded-xl text-white font-bold shadow-md hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all">
+                            className="btn-primary w-full py-2 rounded-xl text-white text-sm font-bold shadow-md hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all">
                             {payoutLoading ? 'Memproses...' : 'Tarik Sekarang'}
                           </button>
                         </div>
@@ -906,12 +921,12 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <details className="group bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
-                  <summary className="p-8 font-bold text-gray-900 dark:text-white flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden outline-none">
+                <details className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
+                  <summary className="p-4 sm:p-5 font-bold text-sm text-gray-900 dark:text-white flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden outline-none">
                     <span className="flex items-center gap-2"><History size={20} className="text-green-600" /> Riwayat Pencairan</span>
                     <svg className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </summary>
-                  <div className="px-8 pb-8 border-t border-gray-100 dark:border-gray-800 pt-4">
+                  <div className="px-4 sm:px-5 pb-4 sm:pb-5 border-t border-gray-100 dark:border-gray-800 pt-3">
                   {payouts.length === 0 ? (
                     <div className="text-center py-12">
                       <History size={48} className="mx-auto text-gray-200 mb-2" />

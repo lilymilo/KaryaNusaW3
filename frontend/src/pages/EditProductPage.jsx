@@ -10,7 +10,7 @@ const CATEGORIES = ['E-book', 'Course', 'Software', 'Template', 'Design', 'Audio
 
 export default function EditProductPage() {
   const { id } = useParams();
-  const [form, setForm] = useState({ name: '', price: '', description: '', category: 'E-book', stock: '' });
+  const [form, setForm] = useState({ name: '', price: '', description: '', category: 'E-book' });
   const [existingImages, setExistingImages] = useState([]); // URLs from server
   const [newImages, setNewImages] = useState([]); // New File objects
   const [newPreviews, setNewPreviews] = useState([]); // URLs for new files
@@ -28,8 +28,7 @@ export default function EditProductPage() {
           name: data.name || '',
           price: data.price?.toString() || '',
           description: data.description || '',
-          category: data.category || 'E-book',
-          stock: data.stock?.toString() || ''
+          category: data.category || 'E-book'
         });
         
         if (data.images && data.images.length > 0) {
@@ -74,7 +73,9 @@ export default function EditProductPage() {
     setLoading(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+      Object.entries(form).forEach(([k, v]) => {
+        fd.append(k, v);
+      });
       
       fd.append('existing_images', JSON.stringify(existingImages));
 
@@ -110,7 +111,7 @@ export default function EditProductPage() {
       <Navbar onCartOpen={() => setCartOpen(true)} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
 
-      <div className="pt-20 max-w-2xl mx-auto px-4 sm:px-6 pb-32">
+      <div className="pt-16 max-w-2xl mx-auto px-4 sm:px-6 pb-20 sm:pb-8">
         <div className="py-8 flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             <ArrowLeft size={18} className="text-gray-500" />
@@ -190,22 +191,12 @@ export default function EditProductPage() {
                 className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all font-medium" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Harga (IDR) *</label>
-                <input type="text" inputMode="numeric" placeholder="0"
-                  value={form.price ? Number(form.price).toLocaleString('id-ID') : ''} 
-                  onChange={e => setForm({ ...form, price: e.target.value.replace(/\D/g, '') })}
-                  className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors font-medium" />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Stok <span className="font-normal text-xs">(opsional)</span></label>
-                <input type="text" inputMode="numeric" placeholder="Unlimited"
-                  value={form.stock ? Number(form.stock).toLocaleString('id-ID') : ''} 
-                  onChange={e => setForm({ ...form, stock: e.target.value.replace(/\D/g, '') })}
-                  className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors font-medium" />
-                <p className="text-[10px] text-gray-400 mt-1 font-medium">Kosongkan untuk stok tak terbatas</p>
-              </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-500 dark:text-gray-400 mb-2">Harga (IDR) *</label>
+              <input type="text" inputMode="numeric" placeholder="0"
+                value={form.price ? Number(form.price).toLocaleString('id-ID') : ''} 
+                onChange={e => setForm({ ...form, price: e.target.value.replace(/\D/g, '') })}
+                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors font-medium" />
             </div>
 
             <div>

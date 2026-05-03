@@ -34,13 +34,13 @@ export default function FeedPage() {
   const lastThreadRef = useCallback((node) => {
     if (loading || loadingMore) return;
     if (observer.current) observer.current.disconnect();
-    
+
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore) {
         setPage(prev => prev + 1);
       }
     });
-    
+
     if (node) observer.current.observe(node);
   }, [loading, loadingMore, hasMore]);
 
@@ -78,7 +78,7 @@ export default function FeedPage() {
           limit: 20
         }
       });
-      
+
       if (isInitial) {
         setThreads(data.data || []);
       } else {
@@ -98,7 +98,7 @@ export default function FeedPage() {
     try {
       const { data } = await api.get(`/shop/${user.username || user.id}`);
       setUserProducts(data.products || []);
-    } catch (err) {}
+    } catch (err) { }
   };
 
   const handleFileSelect = (e) => {
@@ -106,6 +106,7 @@ export default function FeedPage() {
     if (!file) return;
     if (!file.type.startsWith('image/')) return toast.error('Hanya mendukung format gambar');
     if (file.size > 5 * 1024 * 1024) return toast.error('Maksimal ukuran 5MB');
+    if (filePreview) URL.revokeObjectURL(filePreview);
     setStagedFile(file);
     setFilePreview(URL.createObjectURL(file));
   };
@@ -123,11 +124,11 @@ export default function FeedPage() {
         const filePath = `threads/${user.id}/${Math.random()}.${fileExt}`;
         const { error } = await supabase.storage.from('public').upload(filePath, stagedFile);
         if (error) {
-           const { error: fallbackErr } = await supabase.storage.from('avatars').upload(filePath, stagedFile);
-           if (fallbackErr) throw fallbackErr;
-           imageUrl = supabase.storage.from('avatars').getPublicUrl(filePath).data.publicUrl;
+          const { error: fallbackErr } = await supabase.storage.from('avatars').upload(filePath, stagedFile);
+          if (fallbackErr) throw fallbackErr;
+          imageUrl = supabase.storage.from('avatars').getPublicUrl(filePath).data.publicUrl;
         } else {
-           imageUrl = supabase.storage.from('public').getPublicUrl(filePath).data.publicUrl;
+          imageUrl = supabase.storage.from('public').getPublicUrl(filePath).data.publicUrl;
         }
       }
 
@@ -140,6 +141,7 @@ export default function FeedPage() {
       toast.success('Utas berhasil diunggah!');
       setContent('');
       setStagedFile(null);
+      if (filePreview) URL.revokeObjectURL(filePreview);
       setFilePreview(null);
       setLinkedProduct(null);
       fetchFeed(true);
@@ -156,7 +158,7 @@ export default function FeedPage() {
     try {
       const { data } = await api.post(`/threads/${threadId}/like`);
       setThreads(threads.map(t => t.id === threadId ? { ...t, isLiked: data.isLiked, likes_count: t.likes_count + (data.isLiked ? 1 : -1) } : t));
-    } catch (err) {}
+    } catch (err) { }
   };
 
   const handleRepost = async (e, threadId) => {
@@ -194,32 +196,32 @@ export default function FeedPage() {
     const now = new Date();
     const diff = (now - d) / 1000;
     if (diff < 60) return 'Baru saja';
-    if (diff < 3600) return `${Math.floor(diff/60)}m`;
-    if (diff < 86400) return `${Math.floor(diff/3600)}j`;
-    if (diff < 604800) return `${Math.floor(diff/86400)}h`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}j`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}h`;
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
   };
 
-  const articleClasses = "p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer";
+  const articleClasses = "p-2.5 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20 sm:pb-0 transition-colors">
       <Navbar onCartOpen={() => setCartOpen(true)} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
 
-      <div className="pt-16 max-w-2xl mx-auto border-x border-gray-200 dark:border-gray-800 min-h-screen bg-white dark:bg-gray-900 shadow-sm relative transition-colors">
-        
-        <div className="sticky top-16 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 p-4">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Linimasa</h1>
+      <div className="pt-14 max-w-2xl mx-auto border-x border-gray-200 dark:border-gray-800 min-h-screen bg-white dark:bg-gray-900 shadow-sm relative transition-colors">
+
+        <div className="sticky top-14 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 px-4 py-2.5">
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white">Linimasa</h1>
         </div>
 
         {user ? (
-          <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-800">
-            <div className="flex gap-3">
+          <div className="p-2.5 sm:p-3 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex gap-2.5">
               {user.avatar ? (
-                <img src={user.avatar} className="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200 dark:border-gray-700" />
+                <img src={user.avatar} className="w-9 h-9 rounded-full object-cover shrink-0" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0 border border-gray-200 dark:border-gray-700"><User size={20} className="text-gray-400" /></div>
+                <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0"><User size={18} className="text-gray-400" /></div>
               )}
               <div className="flex-1 min-w-0">
                 <textarea
@@ -227,15 +229,15 @@ export default function FeedPage() {
                   value={content}
                   onChange={e => { setContent(e.target.value); autoResize(); }}
                   placeholder="Apa yang ingin Anda bagikan?"
-                  className="w-full bg-transparent resize-none outline-none text-gray-900 dark:text-white text-[15px] placeholder-gray-400 dark:placeholder-gray-500 py-2 min-h-[56px]"
+                  className="w-full bg-transparent resize-none outline-none text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-gray-500 py-1.5 min-h-[48px]"
                   rows={2}
                 />
-                
+
                 {filePreview && (
                   <div className="relative mb-3 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
                     <img src={filePreview} className="w-full max-h-72 object-cover" />
-                    <button onClick={() => { setStagedFile(null); setFilePreview(null); }} className="absolute top-2 right-2 p-1.5 bg-gray-900/70 text-white rounded-full hover:bg-red-500 transition-colors">
-                      <X size={14}/>
+                    <button onClick={() => { if (filePreview) URL.revokeObjectURL(filePreview); setStagedFile(null); setFilePreview(null); }} className="absolute top-2 right-2 p-1.5 bg-gray-900/70 text-white rounded-full hover:bg-red-500 transition-colors">
+                      <X size={14} />
                     </button>
                   </div>
                 )}
@@ -247,19 +249,19 @@ export default function FeedPage() {
                       <p className="font-bold text-sm truncate text-gray-900 dark:text-white">{linkedProduct.name}</p>
                       <p className="text-xs text-green-600 dark:text-emerald-400 font-semibold">Rp {linkedProduct.price?.toLocaleString('id-ID')}</p>
                     </div>
-                    <button onClick={() => setLinkedProduct(null)} className="p-1 hover:text-red-500 text-gray-400"><X size={16}/></button>
+                    <button onClick={() => setLinkedProduct(null)} className="p-1 hover:text-red-500 text-gray-400"><X size={16} /></button>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex gap-1 text-green-600 dark:text-emerald-400 -ml-2">
-                    <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-full hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title="Gambar">
-                      <ImageIcon size={20} />
+                    <button onClick={() => fileInputRef.current?.click()} className="p-1.5 rounded-full hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title="Gambar">
+                      <ImageIcon size={18} />
                     </button>
                     <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
                     <div className="relative">
-                      <button onClick={() => setShowProductPicker(!showProductPicker)} className="p-2 rounded-full hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title="Tautkan Produk">
-                        <Package size={20} />
+                      <button onClick={() => setShowProductPicker(!showProductPicker)} className="p-1.5 rounded-full hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title="Tautkan Produk">
+                        <Package size={18} />
                       </button>
                       {showProductPicker && (
                         <div className="absolute top-10 left-0 w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 z-30 p-2 max-h-60 overflow-y-auto">
@@ -303,11 +305,11 @@ export default function FeedPage() {
             <>
               {threads.map((thread, index) => (
                 <div key={thread.id} ref={index === threads.length - 1 ? lastThreadRef : null}>
-                  <article 
-                    onClick={() => navigate(`/thread/${thread.id}`)} 
+                  <article
+                    onClick={() => navigate(`/thread/${thread.id}`)}
                     className={articleClasses}
                   >
-                    
+
                     {thread.quoted_thread_id && !thread.content && (
                       <div className="flex items-center gap-2 mb-1.5 ml-8 text-gray-500 text-[13px] font-bold">
                         <Repeat size={14} />
@@ -315,27 +317,27 @@ export default function FeedPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-2.5 sm:gap-3">
+                    <div className="flex gap-2">
                       <div onClick={(e) => { e.stopPropagation(); navigate(`/shop/${thread.author.username || thread.author.id}`); }} className="shrink-0">
                         {thread.author.avatar || thread.author.shop_logo_url ? (
-                          <img loading="lazy" src={thread.author.avatar || thread.author.shop_logo_url} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" />
+                          <img loading="lazy" src={thread.author.avatar || thread.author.shop_logo_url} className="w-8 h-8 rounded-full object-cover bg-gray-100 dark:bg-gray-800" />
                         ) : (
-                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center"><User size={20} className="text-gray-400" /></div>
+                          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center"><User size={16} className="text-gray-400" /></div>
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <div onClick={(e) => { e.stopPropagation(); navigate(`/shop/${thread.author.username || thread.author.id}`); }} className="font-bold text-gray-900 dark:text-white hover:underline truncate text-[15px]">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <div onClick={(e) => { e.stopPropagation(); navigate(`/shop/${thread.author.username || thread.author.id}`); }} className="font-bold text-gray-900 dark:text-white hover:underline truncate text-sm">
                             {thread.author.shop_name || thread.author.full_name}
                           </div>
-                          <span className="text-gray-500 dark:text-gray-400 text-sm truncate">@{thread.author.username}</span>
-                          <span className="text-gray-400 text-sm">·</span>
-                          <span className="text-gray-500 text-sm whitespace-nowrap">{formatTime(thread.created_at)}</span>
-                          
+                          <span className="text-gray-500 dark:text-gray-400 text-xs truncate">@{thread.author.username}</span>
+                          <span className="text-gray-400 text-xs">·</span>
+                          <span className="text-gray-400 text-xs whitespace-nowrap">{formatTime(thread.created_at)}</span>
+
                           <div className="ml-auto relative">
-                            <button onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === thread.id ? null : thread.id); }} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors -mr-1.5">
-                              <MoreHorizontal size={18} />
+                            <button onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === thread.id ? null : thread.id); }} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                              <MoreHorizontal size={16} />
                             </button>
                             {openMenuId === thread.id && (
                               <>
@@ -354,77 +356,71 @@ export default function FeedPage() {
                             )}
                           </div>
                         </div>
-                        
+
                         {thread.content && (
-                          <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap text-[15px] leading-relaxed mb-2.5">
-                            {thread.content}
-                          </p>
+                          <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap text-sm leading-snug mb-2">{thread.content}</p>
                         )}
 
                         {thread.image_url && (
-                          <div className="mb-2.5 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                            <img loading="lazy" src={thread.image_url} alt="" className="w-full h-auto max-h-96 object-cover" />
+                          <div className="mb-2 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                            <img loading="lazy" src={thread.image_url} alt="" className="w-full h-auto max-h-72 object-cover" />
                           </div>
                         )}
 
                         {thread.quoted_thread && (
-                          <div className="mb-2.5 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/thread/${thread.quoted_thread.id}`); }}>
-                            <div className="flex items-center gap-1.5 mb-1.5">
+                          <div className="mb-2 rounded-xl border border-gray-200 dark:border-gray-700 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/thread/${thread.quoted_thread.id}`); }}>
+                            <div className="flex items-center gap-1 mb-1">
                               {thread.quoted_thread.author?.avatar ? (
-                                <img loading="lazy" src={thread.quoted_thread.author.avatar} className="w-4 h-4 rounded-full object-cover" />
+                                <img loading="lazy" src={thread.quoted_thread.author.avatar} className="w-3.5 h-3.5 rounded-full object-cover" />
                               ) : (
-                                <div className="w-4 h-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center"><User size={10} className="text-gray-400" /></div>
+                                <div className="w-3.5 h-3.5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center"><User size={8} className="text-gray-400" /></div>
                               )}
-                              <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white truncate">{thread.quoted_thread.author?.shop_name || thread.quoted_thread.author?.full_name || 'User'}</span>
-                              <span className="text-gray-500 text-xs sm:text-sm truncate">@{thread.quoted_thread.author?.username || 'user'}</span>
-                              <span className="text-gray-400 text-xs">·</span>
-                              <span className="text-gray-500 text-xs whitespace-nowrap">{formatTime(thread.quoted_thread.created_at)}</span>
+                              <span className="font-bold text-xs text-gray-900 dark:text-white truncate">{thread.quoted_thread.author?.shop_name || thread.quoted_thread.author?.full_name || 'User'}</span>
+                              <span className="text-gray-400 text-[11px]">·</span>
+                              <span className="text-gray-400 text-[11px] whitespace-nowrap">{formatTime(thread.quoted_thread.created_at)}</span>
                             </div>
-                            <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-3">{thread.quoted_thread.content}</p>
+                            <p className="text-xs text-gray-800 dark:text-gray-200 line-clamp-2">{thread.quoted_thread.content}</p>
                             {thread.quoted_thread.image_url && (
-                              <img src={thread.quoted_thread.image_url} className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 max-h-40 w-full object-cover" />
+                              <img src={thread.quoted_thread.image_url} className="mt-1.5 rounded-lg border border-gray-200 dark:border-gray-700 max-h-32 w-full object-cover" />
                             )}
                           </div>
                         )}
 
                         {thread.product && (
-                          <div onClick={(e) => { e.stopPropagation(); navigate(`/home`); }} className="mb-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-3 flex gap-4 items-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group relative z-10">
-                            <img src={thread.product.image || thread.product.image_url} className="w-16 h-16 rounded-lg object-cover" />
+                          <div onClick={(e) => { e.stopPropagation(); navigate(`/home`); }} className="mb-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2 flex gap-2.5 items-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative z-10">
+                            <img src={thread.product.image || thread.product.image_url} className="w-10 h-10 rounded-lg object-cover" />
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-green-600 transition-colors line-clamp-1">{thread.product.name}</h4>
-                              <p className="text-green-600 dark:text-emerald-400 font-bold text-sm mt-1">Rp {thread.product.price.toLocaleString('id-ID')}</p>
+                              <h4 className="font-bold text-xs text-gray-900 dark:text-white line-clamp-1">{thread.product.name}</h4>
+                              <p className="text-green-600 dark:text-emerald-400 font-bold text-xs">Rp {thread.product.price.toLocaleString('id-ID')}</p>
                             </div>
-                            <div className="p-2 bg-white dark:bg-gray-700 rounded-full shadow-sm text-gray-600 dark:text-gray-300"><Package size={16}/></div>
                           </div>
                         )}
 
-                        <div className="flex items-center justify-between text-gray-500 dark:text-gray-400 mt-1 pr-2 sm:pr-8 relative z-10 max-w-md -ml-2">
-                          <button onClick={(e) => { e.stopPropagation(); navigate(`/thread/${thread.id}`); }} className="flex items-center gap-1.5 hover:text-blue-500 transition-colors group">
-                            <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30"><MessageSquare size={18} /></div>
-                            <span className="text-xs font-semibold">{thread.replies_count > 0 ? thread.replies_count : ''}</span>
+                        <div className="flex items-center gap-4 text-gray-400 dark:text-gray-500 mt-1">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/thread/${thread.id}`); }} className="flex items-center gap-1 hover:text-blue-500 transition-colors text-xs">
+                            <MessageSquare size={14} />
+                            {thread.replies_count > 0 && <span className="font-semibold">{thread.replies_count}</span>}
                           </button>
                           <div className="relative group/repost">
-                            <button onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 hover:text-green-500 transition-colors group">
-                              <div className="p-2 rounded-full group-hover:bg-green-50 dark:group-hover:bg-green-900/30"><Repeat size={18} /></div>
-                              <span className="text-xs font-semibold">{thread.reposts_count > 0 ? thread.reposts_count : ''}</span>
+                            <button onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-green-500 transition-colors text-xs">
+                              <Repeat size={14} />
+                              {thread.reposts_count > 0 && <span className="font-semibold">{thread.reposts_count}</span>}
                             </button>
-                            <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl w-36 opacity-0 invisible group-hover/repost:opacity-100 group-hover/repost:visible transition-all z-20 overflow-hidden">
-                              <button onClick={(e) => handleRepost(e, thread.id)} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap">Repost</button>
-                              <button onClick={(e) => { e.stopPropagation(); navigate(`/quote/${thread.id}?type=thread`); }} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap">Kutip Utas</button>
+                            <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl w-32 opacity-0 invisible group-hover/repost:opacity-100 group-hover/repost:visible transition-all z-20 overflow-hidden">
+                              <button onClick={(e) => handleRepost(e, thread.id)} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Repost</button>
+                              <button onClick={(e) => { e.stopPropagation(); navigate(`/quote/${thread.id}?type=thread`); }} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Kutip</button>
                             </div>
                           </div>
-                          <button onClick={(e) => { e.stopPropagation(); handleLike(thread.id); }} className={`flex items-center gap-1.5 transition-colors group ${thread.isLiked ? 'text-pink-500' : 'hover:text-pink-500'}`}>
-                            <div className="p-2 rounded-full group-hover:bg-pink-50 dark:group-hover:bg-pink-900/30">
-                              <Heart size={18} className={thread.isLiked ? "fill-pink-500" : ""} />
-                            </div>
-                            <span className="text-xs font-semibold">{thread.likes_count > 0 ? thread.likes_count : ''}</span>
+                          <button onClick={(e) => { e.stopPropagation(); handleLike(thread.id); }} className={`flex items-center gap-1 transition-colors text-xs ${thread.isLiked ? 'text-pink-500' : 'hover:text-pink-500'}`}>
+                            <Heart size={14} className={thread.isLiked ? "fill-pink-500" : ""} />
+                            {thread.likes_count > 0 && <span className="font-semibold">{thread.likes_count}</span>}
                           </button>
-                          <button className="flex items-center gap-1.5 hover:text-blue-500 transition-colors group">
-                            <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30"><BarChart2 size={18} /></div>
-                            <span className="text-xs font-semibold">{thread.views_count > 0 ? thread.views_count : ''}</span>
+                          <button className="flex items-center gap-1 hover:text-blue-500 transition-colors text-xs">
+                            <BarChart2 size={14} />
+                            {thread.views_count > 0 && <span className="font-semibold">{thread.views_count}</span>}
                           </button>
-                          <button className="flex items-center gap-1.5 hover:text-green-500 transition-colors group" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(window.location.host + '/thread/' + thread.id); toast.success('Link disalin') }}>
-                             <div className="p-2 rounded-full group-hover:bg-green-50 dark:group-hover:bg-green-900/30"><Share2 size={18} /></div>
+                          <button className="hover:text-green-500 transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(window.location.host + '/thread/' + thread.id); toast.success('Link disalin') }}>
+                            <Share2 size={14} />
                           </button>
                         </div>
                       </div>
@@ -432,13 +428,13 @@ export default function FeedPage() {
                   </article>
                 </div>
               ))}
-              
+
               {loadingMore && (
                 <div className="flex justify-center py-8 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
                   <Repeat className="w-6 h-6 text-green-600 animate-spin" />
                 </div>
               )}
-              
+
               {!hasMore && threads.length > 0 && (
                 <div className="p-10 text-center text-gray-400 text-sm font-medium bg-white dark:bg-gray-900">
                   — Anda telah melihat semuanya —

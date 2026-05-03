@@ -52,33 +52,32 @@ export default function ShopPage() {
         setProducts(data.products);
 
         if (data.shop) {
-           // Fetch secara terpisah agar satu error tidak menggagalkan semua
-           try {
-             const statsRes = await api.get(`/social/stats/${data.shop.id}`);
-             setFollowStats(statsRes.data);
-           } catch (e) { console.error('Stats error:', e); }
-
-           try {
-             const reviewRes = await api.get(`/social/review/${data.shop.id}`);
-             setReviews({ data: reviewRes.data.reviews || [], stats: reviewRes.data.stats || { total: 0, average: 0 } });
-           } catch (e) { console.error('Review error:', e); }
-
-           try {
-             const threadsRes = await api.get(`/threads/user/${data.shop.id}`);
-             setUserThreads(threadsRes.data.data || threadsRes.data || []);
-           } catch (e) { console.error('Threads error:', e); }
+           // Fetch all secondary data in parallel for much faster page load
+           const promises = [
+             api.get(`/social/stats/${data.shop.id}`).catch(e => { console.error('Stats error:', e); return null; }),
+             api.get(`/social/review/${data.shop.id}`).catch(e => { console.error('Review error:', e); return null; }),
+             api.get(`/threads/user/${data.shop.id}`).catch(e => { console.error('Threads error:', e); return null; }),
+           ];
 
            if (user && user.id !== data.shop.id) {
-             try {
-               const statusRes = await api.get(`/social/follow/${data.shop.id}/status`);
-               setIsFollowing(statusRes.data.isFollowing);
-             } catch (e) { console.error('Follow status error:', e); }
+             promises.push(api.get(`/social/follow/${data.shop.id}/status`).catch(e => { console.error('Follow status error:', e); return null; }));
+           } else {
+             promises.push(Promise.resolve(null));
            }
-        }
 
-        if (user) {
-          const { data: wishData } = await api.get('/wishlist');
-          setWishlistIds(wishData.map(item => item.product_id));
+           if (user) {
+             promises.push(api.get('/wishlist').catch(e => { console.error('Wishlist error:', e); return null; }));
+           } else {
+             promises.push(Promise.resolve(null));
+           }
+
+           const [statsRes, reviewRes, threadsRes, followRes, wishRes] = await Promise.all(promises);
+
+           if (statsRes?.data) setFollowStats(statsRes.data);
+           if (reviewRes?.data) setReviews({ data: reviewRes.data.reviews || [], stats: reviewRes.data.stats || { total: 0, average: 0 } });
+           if (threadsRes?.data) setUserThreads(threadsRes.data.data || threadsRes.data || []);
+           if (followRes?.data) setIsFollowing(followRes.data.isFollowing);
+           if (wishRes?.data) setWishlistIds(wishRes.data.map(item => item.product_id));
         }
       } catch (err) {
         console.error('Error fetching shop data:', err);
@@ -217,17 +216,17 @@ export default function ShopPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 pb-20 pt-16">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 pb-20 pt-14">
       <Navbar onCartOpen={() => setCartOpen(true)} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
 
-      <div className="relative h-64 md:h-80 w-full overflow-hidden bg-gray-200 dark:bg-gray-800 transition-colors">
+      <div className="relative h-32 sm:h-44 w-full overflow-hidden bg-gray-200 dark:bg-gray-800 transition-colors">
         <button 
           onClick={() => navigate(-1)} 
-          className="absolute top-4 left-4 sm:top-6 sm:left-6 z-30 p-2 sm:p-2.5 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white transition-colors"
+          className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white transition-colors"
           title="Kembali"
         >
-          <ArrowLeft size={24} />
+          <ArrowLeft size={20} />
         </button>
         {shop.shop_banner_url && (
           <img 
@@ -239,131 +238,123 @@ export default function ShopPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-gray-50 dark:from-gray-950 via-transparent to-transparent transition-colors pointer-events-none" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative -mt-20 z-10">
-        <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] p-6 md:p-10 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-10 transition-colors">
-          
-          <div className="relative">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden border-4 border-white dark:border-gray-800 shadow-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center transition-colors">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 relative -mt-10 z-10">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 sm:p-5 border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+            {/* Avatar */}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-3 border-white dark:border-gray-800 shadow-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
               {shop.shop_logo_url || shop.avatar ? (
                 <img src={shop.shop_logo_url || shop.avatar} alt={shop.shop_name} className="w-full h-full object-cover" />
               ) : (
-                <Store size={48} className="text-gray-400 dark:text-gray-500" />
+                <Store size={32} className="text-gray-400 dark:text-gray-500" />
               )}
             </div>
-          </div>
 
-          <div className="flex-1 text-center md:text-left space-y-4">
-            <div>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-2">
-                <div className="flex flex-col items-center md:items-start">
-                  <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-tight">{shop.shop_name || shop.full_name}</h1>
-                  <span className="text-gray-500 dark:text-gray-400 text-sm font-bold mt-1">@{shop.username}</span>
+            {/* Info */}
+            <div className="flex-1 min-w-0 text-center sm:text-left">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                <h1 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white leading-tight truncate">{shop.shop_name || shop.full_name}</h1>
+                <span className="px-2 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-emerald-400 text-[10px] font-bold rounded border border-green-200 dark:border-emerald-900/50">Verified</span>
+              </div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs font-bold mb-2">@{shop.username}</p>
+              {shop.shop_description && (
+                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium line-clamp-2">{shop.shop_description}</p>
+              )}
+
+              {/* Stats inline */}
+              <div className="flex flex-wrap justify-center sm:justify-start gap-4 mt-3">
+                <button onClick={() => setModalType('followers')} className="flex items-center gap-1.5 hover:text-green-600 transition-colors">
+                  <span className="text-sm font-black text-gray-900 dark:text-white">{followStats.followers}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Pengikut</span>
+                </button>
+                <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 self-center" />
+                <button onClick={() => setModalType('following')} className="flex items-center gap-1.5 hover:text-green-600 transition-colors">
+                  <span className="text-sm font-black text-gray-900 dark:text-white">{followStats.following || 0}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Mengikuti</span>
+                </button>
+                <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 self-center" />
+                <div className="flex items-center gap-1">
+                  <Star size={14} className="fill-yellow-500 text-yellow-500" />
+                  <span className="text-sm font-black text-gray-900 dark:text-white">{reviews.stats.average}</span>
                 </div>
-                <span className="px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-emerald-400 text-xs font-bold rounded-lg border border-green-200 dark:border-emerald-900/50">Verified Seller</span>
-              </div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base font-medium max-w-2xl">
-                {shop.shop_description || "Selamat datang di toko resmi kami. Kami menyediakan produk digital berkualitas tinggi."}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap justify-center md:justify-start gap-6 pt-2">
-              <button 
-                onClick={() => setModalType('followers')}
-                className="flex flex-col hover:bg-gray-100 dark:hover:bg-gray-800 p-2 -m-2 rounded-xl transition-colors text-center md:text-left"
-              >
-                <span className="text-2xl font-black text-gray-900 dark:text-white group-hover:text-green-600 transition-colors">{followStats.followers}</span>
-                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pengikut</span>
-              </button>
-              <div className="w-px h-10 bg-gray-200 dark:bg-gray-700" />
-              <button 
-                onClick={() => setModalType('following')}
-                className="flex flex-col hover:bg-gray-100 dark:hover:bg-gray-800 p-2 -m-2 rounded-xl transition-colors text-center md:text-left"
-              >
-                <span className="text-2xl font-black text-gray-900 dark:text-white group-hover:text-green-600 transition-colors">{followStats.following || 0}</span>
-                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mengikuti</span>
-              </button>
-              <div className="w-px h-10 bg-gray-200 dark:bg-gray-700" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-1.5">
-                  {reviews.stats.average} <Star size={20} className="fill-yellow-500 text-yellow-500" />
-                </span>
-                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rating Toko</span>
-              </div>
-              <div className="w-px h-10 bg-gray-200 dark:bg-gray-700" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-black text-gray-900 dark:text-white">{products.length}</span>
-                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Karya</span>
+                <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 self-center" />
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-black text-gray-900 dark:text-white">{products.length}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Karya</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-3 w-full md:w-auto">
-            {user?.id !== shop?.id && (
-              <button 
-                onClick={toggleFollow}
-                className={`px-8 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.98] ${isFollowing ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 hover:border-red-200 border border-gray-300 dark:border-gray-700 group' : 'btn-primary text-white'}`}
-              >
-                 {isFollowing ? (
-                   <>
-                     <span className="group-hover:hidden">Mengikuti</span>
-                     <span className="hidden group-hover:inline">Batal Ikuti</span>
-                   </>
-                 ) : (
-                   'Ikuti Profil'
-                 )}
-              </button>
-            )}
-            <div className="flex gap-2">
+            {/* Actions */}
+            <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
               {user?.id !== shop?.id && (
                 <button 
-                  onClick={handleChat}
-                  className="flex-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 border border-blue-100 dark:border-blue-900 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all shadow-sm"
+                  onClick={toggleFollow}
+                  className={`flex-1 sm:flex-none px-5 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.97] ${isFollowing ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 border border-gray-300 dark:border-gray-700 group' : 'btn-primary text-white'}`}
                 >
-                  <MessageCircle size={18} /> Chat
+                   {isFollowing ? (
+                     <>
+                       <span className="group-hover:hidden">Mengikuti</span>
+                       <span className="hidden group-hover:inline">Batal</span>
+                     </>
+                   ) : (
+                     'Ikuti'
+                   )}
                 </button>
               )}
-              <button 
-                onClick={handleShare}
-                className="flex-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm"
-              >
-                 {isCopied ? <Check size={18} className="text-green-500" /> : <Share2 size={18} />}
-              </button>
+              <div className="flex gap-2">
+                {user?.id !== shop?.id && (
+                  <button 
+                    onClick={handleChat}
+                    className="flex-1 sm:flex-none bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 border border-blue-100 dark:border-blue-900 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all shadow-sm"
+                  >
+                    <MessageCircle size={16} /> Chat
+                  </button>
+                )}
+                <button 
+                  onClick={handleShare}
+                  className="p-2 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm"
+                >
+                   {isCopied ? <Check size={16} className="text-green-500" /> : <Share2 size={16} />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex border-b border-gray-200 dark:border-gray-800 mb-8 overflow-x-auto scrollbar-hide sticky top-16 z-20 bg-gray-50 dark:bg-gray-950 transition-colors pt-2">
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 dark:border-gray-800 mb-6 overflow-x-auto scrollbar-hide sticky top-14 z-20 bg-gray-50 dark:bg-gray-950 transition-colors pt-1">
           <button 
             onClick={() => setActiveTab('produk')}
-            className={`pb-2 px-4 font-bold text-[15px] sm:text-lg border-b-2 transition-colors whitespace-nowrap ${activeTab === 'produk' ? 'text-green-600 border-green-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
+            className={`pb-2 px-3 font-bold text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'produk' ? 'text-green-600 border-green-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
           >
-            Katalog Produk
+            Katalog
           </button>
           <button 
             onClick={() => setActiveTab('utas')}
-            className={`pb-2 px-4 font-bold text-[15px] sm:text-lg border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'utas' ? 'text-green-600 border-green-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
+            className={`pb-2 px-3 font-bold text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'utas' ? 'text-green-600 border-green-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
           >
             Utas
           </button>
           <button 
             onClick={() => setActiveTab('ulasan')}
-            className={`pb-2 px-4 font-bold text-[15px] sm:text-lg border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'ulasan' ? 'text-green-600 border-green-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
+            className={`pb-2 px-3 font-bold text-sm border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'ulasan' ? 'text-green-600 border-green-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}
           >
             Ulasan
-            <span className="bg-gray-100 dark:bg-gray-800 text-xs px-2 py-0.5 rounded-full">{reviews.stats.total}</span>
+            <span className="bg-gray-100 dark:bg-gray-800 text-[10px] px-1.5 py-0.5 rounded-full">{reviews.stats.total}</span>
           </button>
         </div>
 
-        <div className="mt-8 space-y-8">
+        <div className="mt-4 space-y-4">
           {activeTab === 'produk' && (
             <>
               {products.length === 0 ? (
-                <div className="text-center py-20 bg-white dark:bg-gray-900 shadow-sm rounded-3xl border border-dashed border-gray-300 dark:border-gray-700 transition-colors">
-                   <Package size={48} className="mx-auto text-gray-300 dark:text-gray-700 mb-4" />
-                   <p className="text-gray-500 dark:text-gray-400 font-bold text-xl">Belum ada karya digital</p>
+                <div className="text-center py-12 bg-white dark:bg-gray-900 shadow-sm rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 transition-colors">
+                   <Package size={36} className="mx-auto text-gray-300 dark:text-gray-700 mb-3" />
+                   <p className="text-gray-500 dark:text-gray-400 font-bold text-base">Belum ada karya digital</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   {products.map(p => (
                     <ProductCard 
                       key={p.id} 
@@ -378,124 +369,112 @@ export default function ShopPage() {
           )}
 
           {activeTab === 'utas' && (
-            <div className="animate-in fade-in max-w-2xl mx-auto rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
-              <div className="divide-y divide-gray-200 dark:divide-gray-800">
+            <div className="animate-in fade-in max-w-2xl mx-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {userThreads.length === 0 ? (
-                  <div className="p-10 text-center text-gray-500 font-medium">Belum ada utas yang dibagikan oleh pembuat ini.</div>
+                  <div className="p-8 text-center text-gray-500 text-sm font-medium">Belum ada utas.</div>
                 ) : (
                   userThreads.map(thread => (
-                    <div key={thread.id} onClick={() => navigate(`/thread/${thread.id}`)} className="p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer last:border-0 border-b border-gray-100 dark:border-gray-800">
+                    <div key={thread.id} onClick={() => navigate(`/thread/${thread.id}`)} className="p-2.5 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer">
                       {thread.quoted_thread_id && !thread.content && (
-                        <div className="flex items-center gap-2 mb-2 ml-8 text-gray-500 font-bold text-xs">
-                          <Repeat size={14} />
+                        <div className="flex items-center gap-1.5 mb-1.5 ml-8 text-gray-500 font-bold text-[11px]">
+                          <Repeat size={12} />
                           <span>{thread.author.full_name} memposting ulang</span>
                         </div>
                       )}
-                      <div className="flex gap-2.5 sm:gap-3">
-                        <div className="shrink-0 z-10">
+                      <div className="flex gap-2">
+                        <div className="shrink-0">
                           {thread.author.avatar || thread.author.shop_logo_url ? (
-                            <img src={thread.author.avatar || thread.author.shop_logo_url} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover bg-gray-100 dark:bg-gray-800" />
+                            <img src={thread.author.avatar || thread.author.shop_logo_url} className="w-8 h-8 rounded-full object-cover bg-gray-100 dark:bg-gray-800" />
                           ) : (
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
-                              <User size={20} className="text-gray-400" />
+                            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
+                              <User size={16} className="text-gray-400" />
                             </div>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-1 z-10 relative">
-                            <div className="font-bold text-gray-900 dark:text-white hover:underline truncate">
-                              {thread.author.shop_name || thread.author.full_name}
-                            </div>
-                            <span className="text-gray-500 dark:text-gray-400 text-sm truncate">@{thread.author.username}</span>
-                            <span className="text-gray-500 text-sm">·</span>
-                            <span className="text-gray-500 text-sm whitespace-nowrap hover:underline">{formatTime(thread.created_at)}</span>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <span className="font-bold text-sm text-gray-900 dark:text-white truncate">{thread.author.shop_name || thread.author.full_name}</span>
+                            <span className="text-gray-500 dark:text-gray-400 text-xs truncate">@{thread.author.username}</span>
+                            <span className="text-gray-400 text-xs">·</span>
+                            <span className="text-gray-400 text-xs whitespace-nowrap">{formatTime(thread.created_at)}</span>
                             {user && user.id === thread.author.id && (
-                              <button onClick={(e) => handleDelete(e, thread.id)} className="ml-auto text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30" title="Hapus Utas">
-                                <Trash2 size={16} />
+                              <button onClick={(e) => handleDelete(e, thread.id)} className="ml-auto text-gray-400 hover:text-red-500 transition-colors p-0.5 rounded-full" title="Hapus">
+                                <Trash2 size={14} />
                               </button>
                             )}
                           </div>
                           
                           {thread.parent_id && thread.parent_thread?.author?.username && (
-                             <p className="text-xs text-gray-500 mb-1.5">
+                             <p className="text-[11px] text-gray-500 mb-1">
                                Membalas <span className="text-green-600 dark:text-emerald-400 font-semibold cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); navigate(`/thread/${thread.parent_id}`); }}>@{thread.parent_thread.author.username}</span>
                              </p>
                           )}
                           
                           {thread.content && (
-                            <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap text-sm sm:text-[15px] leading-relaxed mb-2.5">
-                              {thread.content}
-                            </p>
+                            <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap text-sm leading-snug mb-2">{thread.content}</p>
                           )}
 
                           {thread.image_url && (
-                            <div className="mb-3 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                              <img src={thread.image_url} alt="Thread media" className="w-full h-auto max-h-96 object-cover" />
+                            <div className="mb-2 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                              <img src={thread.image_url} alt="" className="w-full h-auto max-h-64 object-cover" />
                             </div>
                           )}
 
                           {thread.quoted_thread && (
-                            <div className="mb-2.5 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/thread/${thread.quoted_thread.id}`); }}>
-                              <div className="flex items-center gap-1.5 mb-1.5">
+                            <div className="mb-2 rounded-xl border border-gray-200 dark:border-gray-700 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/thread/${thread.quoted_thread.id}`); }}>
+                              <div className="flex items-center gap-1 mb-1">
                                  {thread.quoted_thread.author?.avatar ? (
-                                   <img src={thread.quoted_thread.author.avatar} className="w-4 h-4 rounded-full object-cover" />
+                                   <img src={thread.quoted_thread.author.avatar} className="w-3.5 h-3.5 rounded-full object-cover" />
                                  ) : (
-                                   <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center"><User size={10} className="text-gray-400"/></div>
+                                   <div className="w-3.5 h-3.5 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center"><User size={8} className="text-gray-400"/></div>
                                  )}
-                                 <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white line-clamp-1">{thread.quoted_thread.author?.shop_name || thread.quoted_thread.author?.full_name || 'User'}</span>
-                                 <span className="text-gray-500 text-xs sm:text-sm truncate">@{thread.quoted_thread.author?.username || 'user'}</span>
-                                 <span className="text-gray-500 text-xs sm:text-sm">·</span>
-                                 <span className="text-gray-500 text-xs sm:text-sm whitespace-nowrap">{formatTime(thread.quoted_thread.created_at)}</span>
+                                 <span className="font-bold text-xs text-gray-900 dark:text-white truncate">{thread.quoted_thread.author?.shop_name || thread.quoted_thread.author?.full_name || 'User'}</span>
+                                 <span className="text-gray-500 text-[11px]">·</span>
+                                 <span className="text-gray-500 text-[11px] whitespace-nowrap">{formatTime(thread.quoted_thread.created_at)}</span>
                               </div>
-                              <p className="text-xs sm:text-sm text-gray-800 dark:text-gray-200">{thread.quoted_thread.content}</p>
+                              <p className="text-xs text-gray-800 dark:text-gray-200 line-clamp-2">{thread.quoted_thread.content}</p>
                               {thread.quoted_thread.image_url && (
-                                <img src={thread.quoted_thread.image_url} className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 max-h-48 w-full object-cover" />
+                                <img src={thread.quoted_thread.image_url} className="mt-1.5 rounded-lg border border-gray-200 dark:border-gray-700 max-h-32 w-full object-cover" />
                               )}
                             </div>
                           )}
 
                           {thread.product && (
-                            <div onClick={(e) => { e.stopPropagation(); navigate(`/home`); }} className="block mb-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 flex gap-4 items-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group relative z-10">
-                              <img src={thread.product.image || thread.product.image_url} className="w-16 h-16 rounded-lg object-cover" />
+                            <div onClick={(e) => { e.stopPropagation(); navigate(`/home`); }} className="mb-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-2 flex gap-2.5 items-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                              <img src={thread.product.image || thread.product.image_url} className="w-10 h-10 rounded-lg object-cover" />
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-green-600 transition-colors line-clamp-1">{thread.product.name}</h4>
-                                <p className="text-green-600 dark:text-emerald-400 font-bold text-sm mt-1">Rp {thread.product.price.toLocaleString('id-ID')}</p>
+                                <h4 className="font-bold text-xs text-gray-900 dark:text-white line-clamp-1">{thread.product.name}</h4>
+                                <p className="text-green-600 dark:text-emerald-400 font-bold text-xs">{formatPrice(thread.product.price)}</p>
                               </div>
-                              <div className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-sm text-gray-600"><Package size={16}/></div>
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between text-gray-500 dark:text-gray-400 mt-3 pr-2 sm:pr-8 relative z-10 max-w-md">
-                            <button onClick={(e) => { e.stopPropagation(); navigate(`/thread/${thread.id}`); }} className="flex items-center gap-1.5 hover:text-blue-500 transition-colors group">
-                              <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 -ml-2"><MessageSquare size={18} /></div>
-                              <span className="text-xs font-semibold">{thread.replies_count > 0 ? thread.replies_count : ''}</span>
+                          <div className="flex items-center gap-4 text-gray-400 dark:text-gray-500 mt-1">
+                            <button onClick={(e) => { e.stopPropagation(); navigate(`/thread/${thread.id}`); }} className="flex items-center gap-1 hover:text-blue-500 transition-colors text-xs">
+                              <MessageSquare size={14} />
+                              {thread.replies_count > 0 && <span className="font-semibold">{thread.replies_count}</span>}
                             </button>
                             <div className="relative group/repost">
-                              <button onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 hover:text-green-500 transition-colors group">
-                                <div className="p-2 rounded-full group-hover:bg-green-50 dark:group-hover:bg-green-900/30 -ml-2"><Repeat size={18} /></div>
-                                <span className="text-xs font-semibold">{thread.reposts_count > 0 ? thread.reposts_count : ''}</span>
+                              <button onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-green-500 transition-colors text-xs">
+                                <Repeat size={14} />
+                                {thread.reposts_count > 0 && <span className="font-semibold">{thread.reposts_count}</span>}
                               </button>
-                              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl w-36 opacity-0 invisible group-hover/repost:opacity-100 group-hover/repost:visible transition-all z-20 overflow-hidden">
-                                <button onClick={(e) => handleRepost(e, thread.id)} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap">
-                                  Repost Langsung
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); navigate(`/quote/${thread.id}?type=thread`); }} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap">
-                                  Kutip Utas
-                                </button>
+                              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl w-32 opacity-0 invisible group-hover/repost:opacity-100 group-hover/repost:visible transition-all z-20 overflow-hidden">
+                                <button onClick={(e) => handleRepost(e, thread.id)} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Repost</button>
+                                <button onClick={(e) => { e.stopPropagation(); navigate(`/quote/${thread.id}?type=thread`); }} className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Kutip</button>
                               </div>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); handleLike(thread.id); }} className={`flex items-center gap-1.5 transition-colors group ${thread.isLiked ? 'text-pink-500' : 'hover:text-pink-500'}`}>
-                              <div className="p-2 rounded-full group-hover:bg-pink-50 dark:group-hover:bg-pink-900/30 -ml-2">
-                                <Heart size={18} className={thread.isLiked ? "fill-pink-500" : ""} />
-                              </div>
-                              <span className="text-xs font-semibold">{thread.likes_count > 0 ? thread.likes_count : ''}</span>
+                            <button onClick={(e) => { e.stopPropagation(); handleLike(thread.id); }} className={`flex items-center gap-1 transition-colors text-xs ${thread.isLiked ? 'text-pink-500' : 'hover:text-pink-500'}`}>
+                              <Heart size={14} className={thread.isLiked ? "fill-pink-500" : ""} />
+                              {thread.likes_count > 0 && <span className="font-semibold">{thread.likes_count}</span>}
                             </button>
-                            <button className="flex items-center gap-1.5 hover:text-blue-500 transition-colors group">
-                              <div className="p-2 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 -ml-2"><BarChart2 size={18} /></div>
-                              <span className="text-xs font-semibold">{thread.views_count > 0 ? thread.views_count : ''}</span>
+                            <button className="flex items-center gap-1 hover:text-blue-500 transition-colors text-xs">
+                              <BarChart2 size={14} />
+                              {thread.views_count > 0 && <span className="font-semibold">{thread.views_count}</span>}
                             </button>
-                            <button className="flex items-center gap-1.5 hover:text-green-500 transition-colors group" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(window.location.host + '/thread/' + thread.id); toast.success('Link disalin') }}>
-                               <div className="p-2 rounded-full group-hover:bg-green-50 dark:group-hover:bg-green-900/30 -ml-2"><Share2 size={18} /></div>
+                            <button className="hover:text-green-500 transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(window.location.host + '/thread/' + thread.id); toast.success('Link disalin') }}>
+                               <Share2 size={14} />
                             </button>
                           </div>
                         </div>

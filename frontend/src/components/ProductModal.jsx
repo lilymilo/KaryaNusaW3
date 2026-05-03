@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Star, Heart, Plus, Minus, MessageCircle, Send, MapPin } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Star, Heart, Plus, Minus, MessageCircle, Send } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -25,7 +25,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   const navigate = useNavigate();
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [qty, setQty] = useState(1);
-  const [buyerLocation, setBuyerLocation] = useState('');
+
   const [activeTab, setActiveTab] = useState('detail');
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -35,13 +35,16 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   const [reviewHover, setReviewHover] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [hasPurchased, setHasPurchased] = useState(false);
 
   const [localRatings, setLocalRatings] = useState(null);
+  const [fullProduct, setFullProduct] = useState(null);
 
   useEffect(() => {
     if (product?.id) {
       api.get(`/products/${product.id}`)
         .then(res => {
+          setFullProduct(res.data);
           if (res.data?.product_ratings) {
             setLocalRatings(res.data.product_ratings);
           } else {
@@ -50,7 +53,20 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
         })
         .catch(err => console.error('Error fetching product ratings:', err));
     }
-  }, [product?.id]);
+    // Check if user has purchased this product
+    if (user && product?.id && user.id !== product.seller_id) {
+      api.get('/orders')
+        .then(res => {
+          const orders = res.data || [];
+          const bought = orders.some(order => 
+            ['processing', 'completed'].includes(order.status) &&
+            order.order_items?.some(item => item.product_id === product.id || item.products?.id === product.id)
+          );
+          setHasPurchased(bought);
+        })
+        .catch(() => setHasPurchased(false));
+    }
+  }, [product?.id, user]);
 
   if (!product) return null;
 
@@ -67,8 +83,32 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   const stock = product.stock; // null = unlimited
   const description = product.description || '';
 
-  const productImages = product?.images?.length ? product.images : [product?.image];
+  const mergedProduct = fullProduct || product;
+  const productImages = mergedProduct?.images?.length ? mergedProduct.images : [mergedProduct?.image || product?.image];
   const currentImage = productImages[currentImageIndex] || product?.image;
+  const touchStartX = useRef(0);
+  const isSwiping = useRef(false);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    isSwiping.current = false;
+  };
+  const handleTouchEnd = (e) => {
+    if (productImages.length <= 1) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      isSwiping.current = true;
+      if (diff > 0) {
+        setCurrentImageIndex(prev => (prev === productImages.length - 1 ? 0 : prev + 1));
+      } else {
+        setCurrentImageIndex(prev => (prev === 0 ? productImages.length - 1 : prev - 1));
+      }
+    }
+  };
+  const handleImageClick = () => {
+    if (!isSwiping.current) setLightboxOpen(true);
+  };
+
   const handleAddToCart = async () => {
     if (!user) return toast.error('Login terlebih dahulu');
     if (user.id === product.seller_id) return toast.error('Anda tidak dapat membeli produk sendiri');
@@ -84,8 +124,6 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   const handleBuyNow = () => {
     if (!user) return toast.error('Login terlebih dahulu');
     if (user.id === product.seller_id) return toast.error('Anda tidak dapat membeli produk sendiri');
-    const trimmed = buyerLocation.trim();
-    if (!trimmed) return toast.error('Isi lokasi pembeli untuk Beli Langsung');
 
     const directItem = {
       product_id: product.id,
@@ -98,7 +136,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
       }
     };
 
-    navigate('/checkout', { state: { directItem, buyerLocation: trimmed } });
+    navigate('/checkout', { state: { directItem } });
     onClose();
   };
 
@@ -155,22 +193,24 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm sm:backdrop-blur-md overflow-hidden transition-all" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm overflow-hidden" onClick={onClose}>
       <div 
-        className="bg-white dark:bg-gray-900 rounded-[2.5rem] max-w-6xl w-full max-h-[92vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl relative transition-colors" 
+        className="bg-white dark:bg-gray-900 rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto border border-gray-200 dark:border-gray-700 shadow-2xl relative transition-colors" 
         onClick={e => e.stopPropagation()}
       >
         <button onClick={onClose}
-          className="absolute top-6 right-6 z-10 p-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/40 hover:text-red-500 rounded-full text-gray-500 dark:text-gray-400 transition-all border border-gray-200 dark:border-gray-700 shadow-sm">
-          <X size={20} />
+          className="absolute top-4 right-4 z-10 p-2 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/40 hover:text-red-500 rounded-full text-gray-500 dark:text-gray-400 transition-all border border-gray-200 dark:border-gray-700">
+          <X size={18} />
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 p-4 sm:p-6 lg:p-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 p-4 sm:p-5 lg:p-6">
           
           <div className="lg:col-span-4 space-y-4">
             <div 
-              className="aspect-square rounded-2xl sm:rounded-3xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm relative group cursor-zoom-in"
-              onClick={() => setLightboxOpen(true)}
+              className="aspect-square rounded-2xl sm:rounded-3xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm relative group cursor-zoom-in touch-pan-y"
+              onClick={handleImageClick}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
             >
               {isVideoUrl(currentImage) ? (
                 <video
@@ -341,7 +381,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                  </div>
                ) : (
                  <div className="space-y-4 animate-in fade-in duration-300">
-                   {user && user.id !== product.seller_id && (
+                   {user && user.id !== product.seller_id && hasPurchased && (
                      <form onSubmit={handleSubmitReview} className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3 transition-colors">
                        <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">Tulis Ulasan</p>
                        
@@ -431,11 +471,46 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
 
           <div className="lg:col-span-3">
               <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-[2rem] p-5 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-md lg:sticky lg:top-0 transition-colors">
-                <h3 className="hidden lg:block font-black text-gray-900 dark:text-white mb-6 text-lg">Atur jumlah dan catatan</h3>
-                <h3 className="lg:hidden font-bold text-gray-900 dark:text-white mb-4 text-sm">Beli Produk Ini</h3>
                
-               <div className="space-y-5 sm:space-y-6">
-                  <div className="flex items-center justify-between sm:justify-start gap-4">
+               {user?.id === product.seller_id ? (
+                 /* Owner view */
+                 <div className="space-y-4">
+                   <h3 className="font-black text-gray-900 dark:text-white text-lg">Produk Anda</h3>
+                   <div className="grid grid-cols-2 gap-3 text-center">
+                     <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+                       <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">Terjual</p>
+                       <p className="text-lg font-black text-gray-900 dark:text-white">{sold}</p>
+                     </div>
+                     <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
+                       <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">Kategori</p>
+                       <p className="text-lg font-black text-gray-900 dark:text-white truncate" title={product.category}>{product.category}</p>
+                     </div>
+                   </div>
+                   <div className="space-y-2 pt-2">
+                     <button 
+                       onClick={() => { onClose(); navigate('/profile?tab=statistik'); }}
+                       className="w-full btn-primary py-3 rounded-xl sm:rounded-2xl text-white font-black hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 text-sm shadow-sm"
+                     >
+                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                       Lihat Statistik
+                     </button>
+                     <button 
+                       onClick={() => { onClose(); navigate(`/edit-product/${product.id}`); }}
+                       className="w-full py-3 rounded-xl sm:rounded-2xl border-2 border-green-600 dark:border-emerald-500 text-green-600 dark:text-emerald-400 font-bold hover:bg-green-600 dark:hover:bg-emerald-500 hover:text-white transition-all text-sm shadow-sm flex items-center justify-center gap-2"
+                     >
+                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                       Edit Produk
+                     </button>
+                   </div>
+                 </div>
+               ) : (
+                 /* Buyer view */
+                 <>
+                 <h3 className="hidden lg:block font-black text-gray-900 dark:text-white mb-6 text-lg">Atur jumlah dan catatan</h3>
+                 <h3 className="lg:hidden font-bold text-gray-900 dark:text-white mb-4 text-sm">Beli Produk Ini</h3>
+                
+                <div className="space-y-5 sm:space-y-6">
+                   <div className="flex items-center justify-between sm:justify-start gap-4">
                      <div className="flex items-center bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1">
                        <button 
                          onClick={() => setQty(Math.max(1, qty - 1))}
@@ -447,38 +522,21 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                        <input 
                          type="number" 
                          value={qty}
-                         onChange={(e) => setQty(Math.max(1, stock !== null && stock !== undefined ? Math.min(stock, parseInt(e.target.value) || 1) : (parseInt(e.target.value) || 1)))}
+                         onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
                          className="w-10 sm:w-12 text-center bg-transparent border-none focus:ring-0 font-bold text-gray-900 dark:text-white text-sm sm:text-base"
                        />
                        <button 
-                         onClick={() => setQty(stock !== null && stock !== undefined ? Math.min(stock, qty + 1) : qty + 1)}
+                         onClick={() => setQty(qty + 1)}
                          className="p-1.5 sm:p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-colors text-green-600 dark:text-emerald-400 disabled:opacity-30 shadow-sm border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
-                         disabled={stock !== null && stock !== undefined && qty >= stock}
                        >
                          <Plus size={14} />
                        </button>
                      </div>
-                     <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium shrink-0">Stok: <span className="text-gray-900 dark:text-white font-bold">{stock !== null && stock !== undefined ? stock : '∞'}</span></p>
-                  </div>
+                   </div>
 
                  <div className="flex items-center justify-between py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700">
                     <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium">Subtotal</span>
                     <span className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">{formatPrice(product.price * qty)}</span>
-                 </div>
-
-                 <div className="space-y-2">
-                   <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-400">
-                     <MapPin size={14} className="text-gray-400" />
-                     Lokasi pembeli <span className="font-normal text-red-500">*</span>
-                   </label>
-                   <input
-                     type="text"
-                     value={buyerLocation}
-                     onChange={(e) => setBuyerLocation(e.target.value)}
-                     placeholder="Kota / provinsi / negara"
-                     autoComplete="address-level1"
-                     className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                   />
                  </div>
 
                  <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
@@ -507,6 +565,8 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                    </div>
                  )}
                </div>
+               </>
+               )}
              </div>
           </div>
         </div>
@@ -516,6 +576,8 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
         <div 
           className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-in fade-in duration-200"
           onClick={(e) => { e.stopPropagation(); setLightboxOpen(false); }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
           <button 
             className="absolute top-6 right-6 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"

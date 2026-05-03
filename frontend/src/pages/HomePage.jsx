@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense, useRef, useCallback } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +24,10 @@ export default function HomePage() {
   const [sort, setSort] = useState('');
   const [selected, setSelected] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
+
+  // Memoize filtered product lists to avoid re-filtering on every render
+  const myProducts = useMemo(() => user ? products.filter(p => p.seller_id === user.id) : [], [products, user]);
+  const otherProducts = useMemo(() => products.filter(p => !user || p.seller_id !== user.id), [products, user]);
 
   // Observer for Infinite Scroll
   const observer = useRef();
@@ -142,19 +146,19 @@ export default function HomePage() {
         </Suspense>
       )}
 
-      <div className="pt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
-        <div className="py-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Marketplace <span className="text-green-600 dark:text-emerald-400">KaryaNusa</span></h1>
-          <p className="text-gray-600 dark:text-gray-400">Temukan produk terbaik dari seluruh penjuru Nusantara</p>
+      <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 sm:pb-8">
+        <div className="py-3">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">Marketplace <span className="text-green-600 dark:text-emerald-400">KaryaNusa</span></h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Temukan produk digital terbaik dari Nusantara</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <form onSubmit={handleSearch} className="flex-1 relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
-              type="text" placeholder="Cari produk..."
+              type="text" placeholder="Cari produk dan user..."
               value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all shadow-sm"
+              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-9 pr-4 py-2.5 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all shadow-sm"
             />
             {search && (
               <button type="button" onClick={() => { setSearch(''); fetchProducts(true); }}
@@ -168,7 +172,7 @@ export default function HomePage() {
             <select 
               value={category} 
               onChange={e => setCategory(e.target.value)}
-              className="sm:hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-600 dark:text-gray-300 focus:outline-none focus:border-green-500 cursor-pointer transition-colors shadow-sm text-sm"
+              className="sm:hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-gray-600 dark:text-gray-300 focus:outline-none focus:border-green-500 cursor-pointer transition-colors shadow-sm text-sm"
             >
               <option value="all">Semua Kategori</option>
               {CATEGORIES.filter(c => c !== 'all').map(cat => (
@@ -177,7 +181,7 @@ export default function HomePage() {
             </select>
 
             <select value={sort} onChange={e => setSort(e.target.value)}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-600 dark:text-gray-300 focus:outline-none focus:border-green-500 cursor-pointer transition-colors shadow-sm text-sm">
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-gray-600 dark:text-gray-300 focus:outline-none focus:border-green-500 cursor-pointer transition-colors shadow-sm text-sm">
               <option value="">Urutkan</option>
               <option value="price_asc">Harga Terendah</option>
               <option value="price_desc">Harga Tertinggi</option>
@@ -187,7 +191,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="hidden sm:flex gap-2 overflow-x-auto pb-2 mb-8 scrollbar-hide">
+        <div className="hidden sm:flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
           {CATEGORIES.map(cat => (
             <button key={cat} onClick={() => setCategory(cat)}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
@@ -208,17 +212,17 @@ export default function HomePage() {
              </div>
              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                {shops.map(shop => (
-                 <a href={`/shop/${shop.username || shop.id}`} key={shop.id} className="min-w-[200px] w-[200px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-all flex-shrink-0 group">
+                 <a href={`/shop/${shop.username || shop.id}`} key={shop.id} className="min-w-[160px] w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-shadow flex-shrink-0 group">
                     {(shop.shop_logo_url || shop.avatar) ? (
-                      <img src={shop.shop_logo_url || shop.avatar} className="w-16 h-16 rounded-full object-cover mb-3 bg-gray-100 dark:bg-gray-700 border-2 border-transparent group-hover:border-green-500 transition-colors" />
+                      <img src={shop.shop_logo_url || shop.avatar} className="w-12 h-12 rounded-full object-cover mb-2 bg-gray-100 dark:bg-gray-700 border-2 border-transparent group-hover:border-green-500 transition-colors" />
                     ) : (
-                      <div className="w-16 h-16 rounded-full mb-3 bg-green-600 dark:bg-green-500 border-2 border-transparent group-hover:border-green-500 transition-colors flex items-center justify-center text-white font-black text-xl">
+                      <div className="w-12 h-12 rounded-full mb-2 bg-green-600 dark:bg-green-500 border-2 border-transparent group-hover:border-green-500 transition-colors flex items-center justify-center text-white font-black text-lg">
                         {(shop.shop_name || shop.full_name || 'U').charAt(0).toUpperCase()}
                       </div>
                     )}
                     <h3 className="font-bold text-gray-900 dark:text-white text-sm w-full truncate">{shop.shop_name || shop.full_name}</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 w-full truncate mb-3">@{shop.username || 'user'}</p>
-                    <button className="w-full py-1.5 border border-green-500 text-green-600 dark:text-emerald-400 rounded-lg text-xs font-bold hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 w-full truncate mb-2">@{shop.username || 'user'}</p>
+                    <button className="w-full py-1 border border-green-500 text-green-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
                       Kunjungi Toko
                     </button>
                  </a>
@@ -230,8 +234,8 @@ export default function HomePage() {
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden animate-pulse border border-gray-200 dark:border-gray-700 shadow-sm">
-                <div className="h-48 bg-gray-200 dark:bg-gray-700" />
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden animate-pulse border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="aspect-[4/3] bg-gray-200 dark:bg-gray-700" />
                 <div className="p-4 space-y-3">
                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded" />
                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
@@ -243,20 +247,23 @@ export default function HomePage() {
         ) : products.length === 0 && shops.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
             <Search size={48} className="text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-300 text-lg font-medium">Produk atau Kreator tidak ditemukan</p>
+            <p className="text-gray-600 dark:text-gray-300 text-lg font-medium">Produk atau User tidak ditemukan</p>
             <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Coba kata kunci atau kategori lain</p>
           </div>
         ) : (
-          <div className="space-y-12">
+          <div className="space-y-8">
             {/* My Products Section */}
-            {user && products.some(p => p.seller_id === user.id) && (
+            {user && myProducts.length > 0 && (
               <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white border-l-4 border-green-600 pl-3">Produk Anda</h2>
-                  <a href="/profile" className="text-sm font-bold text-green-600 hover:underline">Kelola Semua</a>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white border-l-4 border-green-600 pl-3">Produk Anda</h2>
+                  <div className="flex items-center gap-3">
+                    <a href="/profile?tab=statistik" className="text-sm font-bold text-blue-600 hover:underline">Statistik</a>
+                    <a href="/profile" className="text-sm font-bold text-green-600 hover:underline">Kelola Semua</a>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                  {products.filter(p => p.seller_id === user.id).map(p => (
+                  {myProducts.map(p => (
                     <ProductCard 
                       key={p.id} 
                       product={p} 
@@ -272,9 +279,9 @@ export default function HomePage() {
 
             {/* Other Products Section */}
             <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white border-l-4 border-gray-300 dark:border-gray-700 pl-3">
-                  {user && products.some(p => p.seller_id === user.id) ? 'Jelajahi Produk Nusantara' : 'Semua Produk'}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white border-l-4 border-gray-300 dark:border-gray-700 pl-3">
+                  {user && myProducts.length > 0 ? 'Jelajahi Produk Nusantara' : 'Semua Produk'}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                   {products.length} produk
@@ -282,8 +289,8 @@ export default function HomePage() {
               </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                {products.filter(p => !user || p.seller_id !== user.id).map((p, index) => (
-                  <div key={p.id} ref={index === products.filter(p => !user || p.seller_id !== user.id).length - 1 ? lastElementRef : null}>
+                {otherProducts.map((p, index) => (
+                  <div key={p.id} ref={index === otherProducts.length - 1 ? lastElementRef : null}>
                     <ProductCard 
                       product={p} 
                       onClick={() => setSelected(p)} 

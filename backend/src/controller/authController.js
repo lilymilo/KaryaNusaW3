@@ -473,6 +473,10 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   const { email: identifier, password } = req.body;
 
+  if (!identifier || !password) {
+    return res.status(400).json({ error: 'Email/username dan password wajib diisi.' });
+  }
+
   let loginAuthData = null;
 
   const adminClient = supabaseAdmin || supabase;
@@ -482,7 +486,8 @@ export const login = async (req, res) => {
     .maybeSingle();
 
   if (matchedProfile) {
-    if (matchedProfile.wallet_address) {
+    // 1. If user has wallet + custom_password, try that first
+    if (matchedProfile.wallet_address && matchedProfile.custom_password) {
       const hashedInput = crypto.createHash('sha256').update(password).digest('hex');
       if (matchedProfile.custom_password === hashedInput) {
         const walletEmail = `${matchedProfile.wallet_address.toLowerCase()}@wallet.karyanusa.com`;
@@ -490,19 +495,23 @@ export const login = async (req, res) => {
         const { data: authData, error } = await supabase.auth.signInWithPassword({ email: walletEmail, password: hiddenPass });
         if (!error && authData.session) loginAuthData = authData;
       }
-    } else if (matchedProfile.email) {
+    }
+
+    // 2. If wallet path didn't work, try email-based Supabase auth
+    if (!loginAuthData && matchedProfile.email) {
       const { data: authData, error } = await supabase.auth.signInWithPassword({ email: matchedProfile.email, password });
       if (!error && authData.session) loginAuthData = authData;
     }
   }
 
+  // 3. Fallback: try identifier directly as email (for users not yet in profiles table)
   if (!loginAuthData) {
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email: identifier, password });
     if (error) return res.status(400).json({ error: 'Kredensial tidak valid atau akun tidak ditemukan.' });
     loginAuthData = authData;
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await adminClient
     .from('profiles')
     .select('*')
     .eq('id', loginAuthData.user.id)
@@ -519,6 +528,7 @@ export const login = async (req, res) => {
   res.json({
     message: "Login Berhasil. Selamat datang :)",
     token: loginAuthData.session.access_token,
+    refresh_token: loginAuthData.session.refresh_token,
     user: userDisplay,
     role: userDisplay.role
   });

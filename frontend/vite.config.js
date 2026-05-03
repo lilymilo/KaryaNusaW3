@@ -14,14 +14,15 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
+      target: 'es2020',
+      cssMinify: 'lightningcss',
       chunkSizeWarningLimit: 600,
       rollupOptions: {
         output: {
-          // Vite v8 (Rolldown): manualChunks harus berupa fungsi
           manualChunks(id) {
             if (id.includes('node_modules/ethers')) return 'vendor-ethers';
-            if (id.includes('node_modules/@solana')) return 'vendor-solana';
             if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) return 'vendor-react';
+            if (id.includes('node_modules/lucide-react')) return 'vendor-icons';
           },
         },
       },

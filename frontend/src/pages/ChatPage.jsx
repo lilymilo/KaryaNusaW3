@@ -86,6 +86,7 @@ export default function ChatPage() {
 
   const scrollRef = useRef();
   const fileInputRef = useRef();
+  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
@@ -125,8 +126,9 @@ export default function ChatPage() {
   useEffect(() => {
     if (!user) return;
 
+    const channelName = `chat_room_${user.id}_${activePartner?.id || 'none'}`;
     const channel = supabase
-      .channel('chat_room')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` },
@@ -221,7 +223,8 @@ export default function ChatPage() {
   const fetchMessages = async (partnerId) => {
     try {
       const { data } = await api.get(`/chat/messages/${partnerId}`);
-      setMessages(data);
+      // Handle both paginated response {messages, hasMore} and legacy flat array
+      setMessages(Array.isArray(data) ? data : (data.messages || []));
     } catch (err) {
       console.error('Error fetching messages:', err);
     }
@@ -295,22 +298,21 @@ export default function ChatPage() {
     }
   };
 
-  let typingTimeout = null;
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
     if (!activePartner) return;
 
-    if (!typingTimeout) {
-      supabase.channel('chat_room').send({
+    if (!typingTimeoutRef.current) {
+      supabase.channel(`chat_room_${user.id}_${activePartner?.id || 'none'}`).send({
         type: 'broadcast',
         event: 'typing',
         payload: { sender_id: user.id, receiver_id: activePartner.id }
       });
     }
 
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      typingTimeout = null;
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      typingTimeoutRef.current = null;
     }, 2000);
   };
 

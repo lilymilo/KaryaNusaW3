@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
-  CheckCircle, Package, Mail, MapPin, ExternalLink, Home, ClipboardList,
+  CheckCircle, Package, Mail, ExternalLink, Home, ClipboardList,
   Bitcoin, Shield, Clock, Copy, Check, ArrowRight
 } from 'lucide-react';
 import { formatPrice, formatDate } from '../utils/format';
@@ -62,7 +62,7 @@ export default function OrderSuccessPage() {
   if (!order) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pt-8 pb-24 px-4 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pt-8 pb-8 px-4 transition-colors">
       <div className="mx-auto max-w-2xl">
 
         <div className="text-center mb-8">
@@ -186,14 +186,7 @@ export default function OrderSuccessPage() {
               </button>
             </div>
 
-            {order.buyer_location && (
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <MapPin size={12} /> Lokasi
-                </span>
-                <span className="text-xs font-bold text-gray-900 dark:text-white">{order.buyer_location}</span>
-              </div>
-            )}
+
           </div>
 
           {isCrypto && order.tx_hash && (

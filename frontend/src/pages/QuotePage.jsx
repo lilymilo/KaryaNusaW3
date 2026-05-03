@@ -103,7 +103,7 @@ export default function QuotePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300 pb-20">
       <Navbar onCartOpen={() => {}} />
-      <div className="max-w-2xl mx-auto pt-20 px-4 sm:px-6">
+      <div className="max-w-2xl mx-auto pt-16 px-4 sm:px-6">
         <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden transition-colors">
           <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex items-center gap-4">

@@ -3,16 +3,29 @@ import { getAuthClient, supabase, supabaseAdmin } from '../config/supabaseClient
 export const getMessages = async (req, res) => {
   try {
     const { otherUserId } = req.params;
+    const { before, limit = 50 } = req.query;
     const authSupabase = getAuthClient(req);
 
-    const { data, error } = await authSupabase
+    let query = authSupabase
       .from('messages')
       .select('*')
       .or(`and(sender_id.eq.${req.user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${req.user.id})`)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false })
+      .limit(Number(limit));
+
+    // Cursor-based pagination: load older messages
+    if (before) {
+      query = query.lt('created_at', before);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
-    res.json(data);
+    // Reverse to chronological order for display
+    res.json({
+      messages: (data || []).reverse(),
+      hasMore: data?.length === Number(limit)
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -23,11 +36,13 @@ export const getConversations = async (req, res) => {
     const userId = req.user.id;
     const authSupabase = getAuthClient(req);
 
+    // Limit to last 500 messages to prevent loading entire history for sidebar grouping
     const { data: messages, error } = await authSupabase
       .from('messages')
       .select('*, sender:sender_id(id, full_name, avatar, shop_name, username), receiver:receiver_id(id, full_name, avatar, shop_name, username)')
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(500);
 
     if (error) throw error;
 

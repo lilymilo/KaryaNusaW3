@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Star, ArrowLeft, CheckCircle, Clock, MapPin, RefreshCw } from 'lucide-react';
+import { Package, Star, ArrowLeft, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { formatPrice, formatDate } from '../utils/format';
 import api from '../api/axios';
 import Navbar from '../components/Navbar';
@@ -83,16 +83,16 @@ export default function OrdersPage() {
         <RatingModal item={ratingItem} onClose={() => setRatingItem(null)} onSuccess={fetchOrders} />
       )}
 
-      <div className="pt-20 max-w-4xl mx-auto px-4 sm:px-6 pb-32">
-        <div className="py-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Pesanan Saya</h1>
-          <p className="text-gray-500 text-sm font-medium">{orders.length} pesanan</p>
+      <div className="pt-16 max-w-4xl mx-auto px-4 sm:px-6 pb-20 sm:pb-8">
+        <div className="py-3">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Pesanan Saya</h1>
+          <p className="text-gray-500 text-xs font-medium">{orders.length} pesanan</p>
         </div>
 
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 rounded-2xl p-6 animate-pulse">
+              <div key={i} className="bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 rounded-xl p-4 animate-pulse">
                 <div className="h-4 bg-gray-200 rounded w-1/3 mb-4" />
                 <div className="h-16 bg-gray-100 rounded" />
               </div>
@@ -109,8 +109,8 @@ export default function OrdersPage() {
         ) : (
           <div className="space-y-4">
             {orders.map(order => (
-              <div key={order.id} className="bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-6 transition-colors">
-                <div className="flex items-center justify-between mb-4">
+              <div key={order.id} className="bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-colors">
+                <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">ID Pesanan</p>
                     <p className="text-sm font-mono font-bold text-gray-700 dark:text-gray-300">{order.id.slice(0, 8).toUpperCase()}</p>
@@ -146,11 +146,11 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                <div className="space-y-3 mb-4">
+                <div className="space-y-2 mb-3">
                   {order.order_items?.map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 transition-colors">
+                    <div key={i} className="flex items-center gap-2.5 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
                       <img src={item.products?.image} alt={item.products?.name}
-                        className="w-12 h-12 object-cover rounded-lg flex-shrink-0 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
+                        className="w-10 h-10 object-cover rounded-lg flex-shrink-0 bg-white dark:bg-gray-900"
                         onError={e => { e.target.style.display = 'none'; }} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{item.products?.name}</p>
@@ -164,16 +164,12 @@ export default function OrdersPage() {
                   ))}
                 </div>
 
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
                   <div>
                     <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                       <p>{order.payment_method?.replace('_', ' ').toUpperCase()}</p>
                       <p className="text-xs opacity-80 mt-0.5 truncate max-w-48">{order.delivery_email}</p>
-                      {order.buyer_location && (
-                        <p className="text-xs opacity-80 mt-1 flex items-center gap-1">
-                          <MapPin size={10} className="flex-shrink-0" /> {order.buyer_location}
-                        </p>
-                      )}
+
                     </div>
                     
                     {(order.tx_hash || order.nft_transfer_tx_hash) && (
