@@ -18,14 +18,14 @@
 
 | Kategori | Fitur |
 |---|---|
-| **🛒 Marketplace** | Buat, edit, hapus produk · Pencarian & filter · Keranjang belanja · Checkout & order tracking |
-| **🔐 Autentikasi** | Register/Login email · Login via MetaMask wallet · Login via Google · Link wallet ke akun existing |
+| **🛒 Marketplace** | Global unlimited availability model · Pencarian & filter · Keranjang belanja · Checkout |
+| **🔐 Autentikasi** | One-click Wallet Connectivity · Register/Login email · Login via Google · Link wallet |
 | **💰 Pembayaran** | Transfer ETH (Sepolia testnet / Hardhat local) · Status pembayaran real-time |
 | **🎨 NFT** | Mint produk sebagai ERC-721 NFT · Transfer kepemilikan saat pembelian · Smart contract KaryaNusaNFT |
 | **🌐 Sosial** | Social feed (threads) · Quote & reply · Follow/unfollow · Profil publik toko |
 | **💬 Chat** | Real-time messaging antar pengguna · Attachment support |
 | **❤️ Wishlist** | Simpan produk favorit · Sinkronisasi lintas halaman |
-| **🌙 UI/UX** | Dark/Light mode · Responsive design · Lazy loading · Micro-animations |
+| **🌙 UI/UX** | High-density minimalist design · Dark/Light mode · Performa tinggi bebas lag & memory leaks |
 
 ### 🏗️ Arsitektur
 
@@ -711,6 +711,20 @@ Response:
 
 ---
 
+## 🚀 Deployment ke Vercel
+
+KaryaNusa telah dikonfigurasi untuk siap di-deploy ke Vercel dengan cepat dan mudah.
+
+1. **Frontend (`/frontend/vercel.json`)**
+   - Framework Preset: `Vite`
+   - Pastikan menambahkan Environment Variables di Vercel settings (Supabase URL & Key).
+
+2. **Backend (`/backend/vercel.json`)**
+   - Gunakan builder `@vercel/node`.
+   - Pastikan menambahkan Environment Variables (Supabase credentials, dll).
+
+---
+
 ## 🤝 Kontribusi
 
 1. Fork repository ini
@@ -729,5 +743,4 @@ Proyek ini dilisensikan di bawah [ISC License](https://opensource.org/licenses/I
 
 <p align="center">
   Dibuat dengan ❤️ untuk Nusantara
-</p># KaryaNusaW3
-# KaryaNusaW3
+</p>
