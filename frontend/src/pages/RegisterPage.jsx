@@ -4,7 +4,7 @@ import { User, Mail, Lock, Store, Phone, Eye, EyeOff, ArrowLeft, MailCheck, Wall
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import { useWallet, WALLET_TYPES } from '../context/WalletContext';
-import { MetaMaskIcon } from '../components/icons/WalletIcons';
+import { UniversalWalletIcon } from '../components/icons/WalletIcons';
 import toast from 'react-hot-toast';
 
 const validateWA = (num) => {
@@ -277,19 +277,19 @@ export default function RegisterPage() {
           <div className="relative z-10">
             <button
               id="register-metamask-btn"
-              onClick={() => handleWalletRegister(WALLET_TYPES.METAMASK)}
-              disabled={walletLoading !== null}
+              onClick={() => handleWalletRegister(WALLET_TYPES.UNIVERSAL)}
+              disabled={loading || walletLoading === WALLET_TYPES.UNIVERSAL}
               className="w-full relative overflow-hidden flex items-center justify-center gap-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-gray-200 dark:border-gray-700 py-3.5 rounded-xl text-gray-900 dark:text-white font-bold transition-all shadow-sm active:scale-[0.98] group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              {walletLoading === WALLET_TYPES.METAMASK ? (
+              {walletLoading === WALLET_TYPES.UNIVERSAL ? (
                 <Loader2 size={20} className="animate-spin text-orange-500 relative z-10" />
               ) : (
                 <div className="group-hover:scale-110 transition-transform relative z-10 w-5 h-5 flex items-center justify-center">
-                  <MetaMaskIcon />
+                  <UniversalWalletIcon />
                 </div>
               )}
-              <span className="relative z-10">{walletLoading === WALLET_TYPES.METAMASK ? 'Menghubungkan...' : 'Daftar via MetaMask'}</span>
+              <span className="relative z-10">{walletLoading === WALLET_TYPES.UNIVERSAL ? 'Menghubungkan...' : 'Daftar via Universal Wallet'}</span>
             </button>
           </div>
 

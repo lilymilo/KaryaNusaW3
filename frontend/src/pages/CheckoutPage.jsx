@@ -8,10 +8,8 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 
 const PAYMENT_METHODS = [
-  { id: 'bank_transfer', label: 'Transfer Bank', icon: Building2, desc: 'BCA, Mandiri, BNI, BRI' },
-  { id: 'credit_card', label: 'Kartu Kredit', icon: CreditCard, desc: 'Visa, Mastercard, JCB' },
-  { id: 'e_wallet', label: 'E-Wallet', icon: Wallet, desc: 'GoPay, OVO, Dana' },
-  { id: 'crypto', label: 'Cryptocurrency', icon: Bitcoin, desc: 'ETH (MetaMask)' },
+  { id: 'qris', label: 'QRIS / E-Wallet', icon: Wallet, desc: 'GoPay, OVO, Dana, LinkAja' },
+  { id: 'crypto', label: 'Cryptocurrency', icon: Bitcoin, desc: 'Universal Wallet (EVM)' },
 ];
 
 const validateWA = (num) => {
@@ -85,7 +83,7 @@ export default function CheckoutPage() {
   const cryptoAmt = useMemo(() => {
     if (form.paymentMethod !== 'crypto' || !walletType) return null;
 
-    if (walletType === WALLET_TYPES.METAMASK && rates.eth) {
+    if (walletType === WALLET_TYPES.UNIVERSAL && rates.eth) {
       return {
         symbol: 'ETH',
         amount: Number((checkoutTotal / rates.eth).toFixed(6)),
@@ -164,10 +162,10 @@ export default function CheckoutPage() {
           setTxStatus('processing');
         };
 
-        if (walletType === WALLET_TYPES.METAMASK) {
+        if (walletType === WALLET_TYPES.UNIVERSAL) {
           result = await sendETH(merchantEth, cryptoAmt.amount, onSent);
         } else {
-          throw new Error('Hanya MetaMask yang didukung saat ini');
+          throw new Error('Wallet tidak didukung saat ini');
         }
 
         txHash = result.txHash;
@@ -261,7 +259,7 @@ export default function CheckoutPage() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Konfirmasi wallet</h3>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Setujui transaksi di MetaMask.
+                  Setujui transaksi di Wallet.
                 </p>
               </>
             )}
@@ -414,23 +412,17 @@ export default function CheckoutPage() {
                         {!walletAddress ? (
                             <button
                               type="button"
-                              onClick={() => handleConnectWallet(WALLET_TYPES.METAMASK)}
+                              onClick={() => handleConnectWallet(WALLET_TYPES.UNIVERSAL)}
                               className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 px-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                             >
-                              <img
-                                src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg"
-                                alt=""
-                                className="h-6 w-6"
-                                width={24}
-                                height={24}
-                              />
-                              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">MetaMask</span>
+                              <Wallet size={20} className="text-gray-700 dark:text-gray-300" />
+                              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Connect Universal Wallet</span>
                             </button>
                         ) : (
                           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
                             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                               <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                                Terhubung (MetaMask)
+                                Terhubung (Universal Wallet)
                                 {isTestnet ? (
                                   <span className="text-yellow-600 dark:text-yellow-400"> · {IS_LOCALNET ? 'Hardhat' : 'testnet'}</span>
                                 ) : null}

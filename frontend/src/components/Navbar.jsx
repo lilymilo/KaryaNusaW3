@@ -28,7 +28,7 @@ export default function Navbar({ onCartOpen }) {
 
   useEffect(() => {
     fetchUnread();
-    const interval = setInterval(fetchUnread, 20000);
+    const interval = setInterval(fetchUnread, 60000);
     document.addEventListener('visibilitychange', fetchUnread);
     return () => {
       clearInterval(interval);

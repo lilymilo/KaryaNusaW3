@@ -1,16 +1,27 @@
-import { X, Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, Loader2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { formatPrice } from '../utils/format';
+import { useState, useCallback } from 'react';
 
 export default function CartDrawer({ open, onClose }) {
   const { cart, updateCart, removeFromCart, cartTotal } = useCart();
   const navigate = useNavigate();
+  const [removingId, setRemovingId] = useState(null);
 
   const handleCheckout = () => {
     onClose();
     navigate('/checkout');
   };
+
+  const handleRemove = useCallback(async (itemId) => {
+    setRemovingId(itemId);
+    try {
+      await removeFromCart(itemId);
+    } finally {
+      setRemovingId(null);
+    }
+  }, [removeFromCart]);
 
   return (
     <>
@@ -34,7 +45,7 @@ export default function CartDrawer({ open, onClose }) {
             </div>
           ) : (
             cart.map(item => (
-              <div key={item.id} className="flex gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
+              <div key={item.id} className={`flex gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-200 ${removingId === item.id ? 'opacity-50 scale-95' : ''}`}>
                 <img src={item.products?.image} alt={item.products?.name}
                   className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                   onError={e => { e.target.style.display = 'none'; }} />
@@ -43,17 +54,19 @@ export default function CartDrawer({ open, onClose }) {
                   <p className="text-green-600 dark:text-emerald-400 text-sm font-black">{formatPrice(item.products?.price || 0)}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <button onClick={() => updateCart(item.id, item.quantity - 1)}
-                      className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-md flex items-center justify-center hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-emerald-400 transition-colors">
+                      disabled={item.quantity <= 1}
+                      className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-md flex items-center justify-center hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-emerald-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                       <Minus size={12} className="text-gray-700 dark:text-gray-300" />
                     </button>
-                    <span className="text-sm font-bold text-gray-900 dark:text-white w-6 text-center">{item.quantity}</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-white w-6 text-center tabular-nums">{item.quantity}</span>
                     <button onClick={() => updateCart(item.id, item.quantity + 1)}
                       className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-md flex items-center justify-center hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-emerald-400 transition-colors">
                       <Plus size={12} className="text-gray-700 dark:text-gray-300" />
                     </button>
-                    <button onClick={() => removeFromCart(item.id)}
-                      className="ml-auto p-1.5 text-red-500 hover:text-white hover:bg-red-500 dark:hover:bg-red-600 rounded-lg transition-all">
-                      <Trash2 size={16} />
+                    <button onClick={() => handleRemove(item.id)}
+                      disabled={removingId === item.id}
+                      className="ml-auto p-1.5 text-red-500 hover:text-white hover:bg-red-500 dark:hover:bg-red-600 rounded-lg transition-all disabled:opacity-50">
+                      {removingId === item.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                     </button>
                   </div>
                 </div>

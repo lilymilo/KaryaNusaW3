@@ -4,7 +4,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowLeft, LogIn, User, Store, Wallet, Loader2
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import { useWallet, WALLET_TYPES } from '../context/WalletContext';
-import { MetaMaskIcon } from '../components/icons/WalletIcons';
+import { UniversalWalletIcon } from '../components/icons/WalletIcons';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -156,19 +156,21 @@ export default function LoginPage() {
           <div className="relative z-10">
             <button
               id="login-metamask-btn"
-              onClick={() => handleWalletLogin(WALLET_TYPES.METAMASK)}
-              disabled={walletLoading !== null}
+              onClick={() => handleWalletLogin(WALLET_TYPES.UNIVERSAL)}
+              disabled={loading || walletLoading === WALLET_TYPES.UNIVERSAL}
               className="w-full relative overflow-hidden flex items-center justify-center gap-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-gray-200 dark:border-gray-700 py-3.5 rounded-xl text-gray-900 dark:text-white font-bold transition-all shadow-sm active:scale-[0.98] group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              {walletLoading === WALLET_TYPES.METAMASK ? (
-                <Loader2 size={20} className="animate-spin text-orange-500 relative z-10" />
+              {walletLoading === WALLET_TYPES.UNIVERSAL ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
               ) : (
-                <div className="group-hover:scale-110 transition-transform relative z-10 w-5 h-5 flex items-center justify-center">
-                  <MetaMaskIcon />
+                <div className="absolute left-4 opacity-70 group-hover:opacity-100 transition-opacity">
+                  <UniversalWalletIcon />
                 </div>
               )}
-              <span className="relative z-10">{walletLoading === WALLET_TYPES.METAMASK ? 'Menghubungkan...' : 'Lanjut dengan MetaMask'}</span>
+              <span className="relative z-10">{walletLoading === WALLET_TYPES.UNIVERSAL ? 'Menghubungkan...' : 'Lanjut dengan Connect Wallet'}</span>
             </button>
           </div>
 

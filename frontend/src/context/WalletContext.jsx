@@ -6,7 +6,7 @@ import { getMetaMaskProvider } from '../utils/evmProvider';
 const WalletContext = createContext();
 
 export const WALLET_TYPES = {
-  METAMASK: 'metamask',
+  UNIVERSAL: 'universal',
 };
 
 const SEPOLIA_CHAIN_ID = '0xaa36a7';
@@ -131,12 +131,11 @@ export const WalletProvider = ({ children }) => {
     }
   };
 
-  const connectMetaMask = useCallback(async () => {
+  const connectUniversalWallet = useCallback(async () => {
     const eth = getMetaMaskProvider();
     if (!eth) {
       throw new Error(
-        'MetaMask tidak terdeteksi. Pasang ekstensi MetaMask, atau jika Anda memakai Coinbase/Phantom/Brave: ' +
-          'nonaktifkan dompet lain sementara, atau pilih MetaMask sebagai dompet default di browser.'
+        'Wallet EVM tidak terdeteksi. Pasang ekstensi Wallet (Phantom, MetaMask, Coinbase, dll) atau pilih salah satu sebagai default di browser.'
       );
     }
 
@@ -145,14 +144,14 @@ export const WalletProvider = ({ children }) => {
       const accounts = await withTimeout(
         eth.request({ method: 'eth_requestAccounts' }),
         30000,
-        'Koneksi MetaMask timeout. Silakan buka popup MetaMask dan setujui koneksi.'
+        'Koneksi wallet timeout. Silakan buka popup wallet dan setujui koneksi.'
       );
       const address = accounts[0];
 
       let currentChainId = await withTimeout(
         eth.request({ method: 'eth_chainId' }),
         15000,
-        'MetaMask tidak merespons (chain id). Coba refresh halaman atau buka kunci MetaMask.'
+        'Wallet tidak merespons (chain id). Coba refresh halaman atau buka kunci wallet.'
       );
 
       const targetChainId = shouldAutoSwitchLocalnet() ? HARDHAT_CHAIN_ID : SEPOLIA_CHAIN_ID;
@@ -161,7 +160,7 @@ export const WalletProvider = ({ children }) => {
 
       if ((shouldAutoSwitchSepolia() || shouldAutoSwitchLocalnet()) && currentChainId !== targetChainId) {
         try {
-          await withTimeout(switchFn(eth), 60000, `Konfirmasi ganti jaringan ke ${networkName} di MetaMask (batas waktu 60 dtk).`);
+          await withTimeout(switchFn(eth), 60000, `Konfirmasi ganti jaringan ke ${networkName} di Wallet (batas waktu 60 dtk).`);
         } catch (switchErr) {
           if (switchErr?.code === 4001) {
             toast('Ganti jaringan dibatalkan — login tetap dilanjutkan di jaringan saat ini.', { duration: 4000 });
@@ -187,7 +186,7 @@ export const WalletProvider = ({ children }) => {
       const testnet = chainId === SEPOLIA_CHAIN_ID || chainId === HARDHAT_CHAIN_ID;
 
       setWalletAddress(address);
-      setWalletType(WALLET_TYPES.METAMASK);
+      setWalletType(WALLET_TYPES.UNIVERSAL);
       setChain(`evm:${chainId}`);
       setIsTestnet(testnet);
 
@@ -219,20 +218,20 @@ export const WalletProvider = ({ children }) => {
   }, []);
 
 
-  const signWithMetaMask = useCallback(async (message) => {
+  const signWithUniversalWallet = useCallback(async (message) => {
     const eth = getMetaMaskProvider();
-    if (!eth) throw new Error('MetaMask tidak tersedia. Refresh halaman atau matikan dompet EVM lain yang override window.ethereum.');
+    if (!eth) throw new Error('Wallet EVM tidak tersedia. Refresh halaman atau matikan dompet EVM lain yang override window.ethereum.');
 
     const provider = new BrowserProvider(eth);
     const signer = await withTimeout(
       provider.getSigner(),
       20000,
-      'MetaMask tidak merespons (signer). Pastikan ekstensi terbuka dan dompet tidak terkunci.'
+      'Wallet tidak merespons (signer). Pastikan ekstensi terbuka dan dompet tidak terkunci.'
     );
     const signature = await withTimeout(
       signer.signMessage(message),
       60000,
-      'Penandatanganan timeout. Silakan setujui permintaan di MetaMask.'
+      'Penandatanganan timeout. Silakan setujui permintaan di Wallet.'
     );
     return signature;
   }, []);
@@ -240,7 +239,7 @@ export const WalletProvider = ({ children }) => {
 
   const sendETH = useCallback(async (toAddress, amountInEth, onSent) => {
     const eth = getMetaMaskProvider();
-    if (!eth) throw new Error('MetaMask tidak tersedia');
+    if (!eth) throw new Error('Wallet EVM tidak tersedia');
     
     const safeAddress = (toAddress || '').toLowerCase();
     
@@ -297,7 +296,7 @@ export const WalletProvider = ({ children }) => {
   }, [walletAddress]);
 
   useEffect(() => {
-    if (walletType === WALLET_TYPES.METAMASK && walletAddress) {
+    if (walletType === WALLET_TYPES.UNIVERSAL && walletAddress) {
       getETHBalance();
     }
   }, [walletAddress, walletType, getETHBalance]);
@@ -306,21 +305,21 @@ export const WalletProvider = ({ children }) => {
 
   const connectWallet = useCallback(async (type) => {
     switch (type) {
-      case WALLET_TYPES.METAMASK:
-        return await connectMetaMask();
+      case WALLET_TYPES.UNIVERSAL:
+        return await connectUniversalWallet();
       default:
         throw new Error(`Tipe wallet "${type}" tidak didukung`);
     }
-  }, [connectMetaMask]);
+  }, [connectUniversalWallet]);
 
   const signMessage = useCallback(async (message, type) => {
     switch (type || walletType) {
-      case WALLET_TYPES.METAMASK:
-        return await signWithMetaMask(message);
+      case WALLET_TYPES.UNIVERSAL:
+        return await signWithUniversalWallet(message);
       default:
         throw new Error('Tidak ada wallet yang terkoneksi');
     }
-  }, [walletType, signWithMetaMask]);
+  }, [walletType, signWithUniversalWallet]);
 
   const disconnectWallet = useCallback(() => {
     setWalletAddress(null);

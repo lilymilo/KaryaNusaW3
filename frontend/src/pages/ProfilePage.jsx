@@ -457,7 +457,7 @@ export default function ProfilePage() {
                     <svg className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform duration-200 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </summary>
                   <div className="px-5 sm:px-6 pb-5 sm:pb-6 border-t border-gray-100 dark:border-gray-800 pt-4">
-                    <p className="text-xs text-gray-500 mb-4 leading-relaxed">Atur password untuk login manual dengan Wallet / Username tanpa MetaMask. Min. 8 karakter, kombinasi huruf besar-kecil, angka & simbol.</p>
+                    <p className="text-xs text-gray-500 mb-4 leading-relaxed">Atur password untuk login manual dengan Username tanpa Wallet EVM. Min. 8 karakter, kombinasi huruf besar-kecil, angka & simbol.</p>
                     <form onSubmit={handleUpdatePassword} className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
@@ -881,10 +881,11 @@ export default function ProfilePage() {
                         <div className="space-y-3">
                           <button 
                             disabled={linkLoading}
-                            onClick={() => handleLinkWallet(WALLET_TYPES.METAMASK)}
-                            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-bold text-gray-700 dark:text-gray-200">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="" className="w-6 h-6" />
-                            MetaMask
+                            onClick={() => handleLinkWallet(WALLET_TYPES.UNIVERSAL)}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-bold text-gray-700 dark:text-gray-300"
+                          >
+                            <Wallet size={20} className="text-gray-700 dark:text-gray-300" />
+                            Universal Wallet
                           </button>
                         </div>
                       </div>

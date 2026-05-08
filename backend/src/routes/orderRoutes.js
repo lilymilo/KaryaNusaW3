@@ -1,5 +1,5 @@
 import express from 'express';
-import { getOrders, getOrderById, createOrder, updateOrderStatus, requestPayout, getPayouts, transferBalance, getIncomingOrders } from '../controller/orderController.js';
+import { getOrders, getOrderById, createOrder, updateOrderStatus, requestPayout, getPayouts, transferBalance, getIncomingOrders, checkPurchase } from '../controller/orderController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -10,6 +10,7 @@ router.post('/payout', protect, requestPayout);
 router.get('/payout/history', protect, getPayouts);
 router.post('/transfer', protect, transferBalance);
 router.get('/incoming', protect, getIncomingOrders);
+router.get('/check-purchase/:productId', protect, checkPurchase);
 router.get('/:id', protect, getOrderById);
 router.patch('/:id/status', protect, updateOrderStatus);
 

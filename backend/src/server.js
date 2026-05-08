@@ -31,7 +31,23 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://warnusthree.my.id',
+  'https://www.warnusthree.my.id'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(compression());
 app.use(express.json());
 

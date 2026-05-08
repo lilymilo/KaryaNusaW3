@@ -456,3 +456,23 @@ export const getIncomingOrders = async (req, res) => {
   }
 };
 
+export const checkPurchase = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const adminClient = supabaseAdmin || getAuthClient(req);
+
+    const { data, error } = await adminClient
+      .from('order_items')
+      .select('id, orders!inner(user_id, status)')
+      .eq('product_id', productId)
+      .eq('orders.user_id', req.user.id)
+      .in('orders.status', ['processing', 'completed'])
+      .limit(1);
+
+    if (error) throw error;
+
+    res.json({ purchased: data && data.length > 0 });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

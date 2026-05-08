@@ -53,16 +53,11 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
         })
         .catch(err => console.error('Error fetching product ratings:', err));
     }
-    // Check if user has purchased this product
+    // Check if user has purchased this product (lightweight check)
     if (user && product?.id && user.id !== product.seller_id) {
-      api.get('/orders')
+      api.get(`/orders/check-purchase/${product.id}`)
         .then(res => {
-          const orders = res.data || [];
-          const bought = orders.some(order => 
-            ['processing', 'completed'].includes(order.status) &&
-            order.order_items?.some(item => item.product_id === product.id || item.products?.id === product.id)
-          );
-          setHasPurchased(bought);
+          setHasPurchased(res.data?.purchased || false);
         })
         .catch(() => setHasPurchased(false));
     }
