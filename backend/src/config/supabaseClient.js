@@ -40,6 +40,7 @@ export const getAuthClient = (req) => {
   }
 
   const client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
     global: {
       headers: {
         Authorization: `Bearer ${token}`,
