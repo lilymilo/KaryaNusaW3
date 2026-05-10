@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Star, Heart, Plus, Minus, MessageCircle, Send } from 'lucide-react';
+import { X, Star, Heart, Plus, Minus, MessageCircle, Send, Lock } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils/format';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
+import PdfCover from './PdfCover';
 
 const isVideoUrl = (url) => {
   if (!url) return false;
@@ -83,6 +84,8 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   const sold = product.sold || 0;
   const stock = product.stock; // null = unlimited
   const description = product.description || '';
+
+  const canAccessMedia = user && (user.id === product.seller_id || hasPurchased);
 
   const mergedProduct = fullProduct || product;
   const productImages = mergedProduct?.images?.length ? mergedProduct.images : [mergedProduct?.image || product?.image];
@@ -222,13 +225,22 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : isPdfUrl(currentImage) ? (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 p-6">
-                  <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
-                    <span className="text-red-500 font-bold text-xl">PDF</span>
+                <div className="w-full h-full relative flex items-center justify-center bg-gray-100 dark:bg-gray-800 overflow-hidden group">
+                  <PdfCover url={currentImage} className="w-full h-full flex items-center justify-center" />
+                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none flex flex-col justify-end p-6">
+                     <div className="flex justify-center pointer-events-auto transition-transform duration-300 transform group-hover:-translate-y-2">
+                        {canAccessMedia ? (
+                          <a href={currentImage} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors shadow-xl" onClick={e => e.stopPropagation()}>
+                            Buka Dokumen PDF
+                          </a>
+                        ) : (
+                          <div className="px-5 py-3 bg-gray-900/95 backdrop-blur text-white rounded-xl font-bold text-sm shadow-xl flex items-center gap-2 border border-gray-700 cursor-not-allowed" onClick={e => e.stopPropagation()}>
+                            <Lock size={16} className="text-red-400" /> Beli Produk untuk Membuka
+                          </div>
+                        )}
+                     </div>
                   </div>
-                  <a href={currentImage} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors shadow-sm" onClick={e => e.stopPropagation()}>
-                    Buka Dokumen PDF
-                  </a>
                 </div>
               ) : (
                 <img src={currentImage} alt={product.name}
@@ -273,8 +285,10 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                         <span className="text-blue-500 font-bold text-[10px]">VIDEO</span>
                       </div>
                     ) : isPdfUrl(img) ? (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
-                        <span className="text-red-500 font-bold text-[10px]">PDF</span>
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 overflow-hidden relative">
+                        <PdfCover url={img} className="w-full h-full [&_canvas]:object-cover [&_canvas]:w-full [&_canvas]:h-full" />
+                        <div className="absolute inset-0 bg-black/10" />
+                        <span className="absolute bottom-0 right-0 bg-red-500 text-white font-bold text-[8px] px-1 rounded-tl shadow-sm z-10">PDF</span>
                       </div>
                     ) : (
                       <img src={img} alt="" className="w-full h-full object-cover" />
@@ -608,6 +622,10 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
               className="max-w-[95vw] max-h-[95vh] cursor-zoom-out"
               onClick={(e) => { e.stopPropagation(); setLightboxOpen(false); }}
             />
+          ) : isPdfUrl(currentImage) ? (
+            <div className="relative max-w-[95vw] max-h-[95vh] w-full h-full flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setLightboxOpen(false); }}>
+               <PdfCover url={currentImage} className="max-w-[95vw] max-h-[95vh] shadow-2xl" />
+            </div>
           ) : (
             <img src={currentImage} alt={product.name} 
               className="max-w-[95vw] max-h-[95vh] object-contain cursor-zoom-out"

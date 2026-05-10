@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatPrice } from '../utils/format';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
+import PdfCover from './PdfCover';
 
 const isVideoUrl = (url) => {
   if (!url) return false;
@@ -75,10 +76,9 @@ function ProductCard({ product, onClick, onDelete, onEdit, initialWishlisted = f
             <span className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/60 text-white text-[9px] font-bold rounded">VIDEO</span>
           </div>
         ) : isPdfUrl(product.image) ? (
-          <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center relative">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-500/20 flex items-center justify-center">
-              <span className="text-red-500 font-black text-xs sm:text-sm">PDF</span>
-            </div>
+          <div className="w-full h-full relative bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+            <PdfCover url={product.image} className="w-full h-full opacity-90 group-hover:scale-105 transition-transform duration-200 [&_canvas]:w-full [&_canvas]:h-full [&_canvas]:object-cover" />
+            <span className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-red-500/90 text-white text-[9px] font-bold rounded z-10 shadow-sm">PDF</span>
           </div>
         ) : (
           <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
