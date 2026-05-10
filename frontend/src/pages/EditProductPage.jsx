@@ -8,12 +8,45 @@ import toast from 'react-hot-toast';
 
 const CATEGORIES = ['E-book', 'Course', 'Software', 'Template', 'Design', 'Audio', 'Other'];
 
+const ACCEPTED_TYPES = [
+  'image/*',
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
+  'application/pdf', '.pdf',
+  '.zip', '.rar', '.7z', '.tar', '.gz',
+  '.doc', '.docx', '.epub', '.txt'
+].join(',');
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB for video/docs
+
+const getFileType = (file) => {
+  const type = file.type || '';
+  if (type.startsWith('image/')) return 'image';
+  if (type.startsWith('video/')) return 'video';
+  if (type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) return 'pdf';
+  
+  const ext = file.name.toLowerCase().split('.').pop();
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'archive';
+  if (['doc', 'docx', 'epub', 'txt'].includes(ext)) return 'document';
+  
+  return 'other';
+};
+
+const getUrlType = (url) => {
+  if (!url) return 'image';
+  const lowerUrl = url.toLowerCase();
+  if (lowerUrl.includes('.pdf')) return 'pdf';
+  if (lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mov') || lowerUrl.includes('.avi')) return 'video';
+  if (lowerUrl.includes('.zip') || lowerUrl.includes('.rar') || lowerUrl.includes('.7z')) return 'archive';
+  if (lowerUrl.includes('.doc') || lowerUrl.includes('.epub') || lowerUrl.includes('.txt')) return 'document';
+  return 'image';
+};
+
 export default function EditProductPage() {
   const { id } = useParams();
   const [form, setForm] = useState({ name: '', price: '', description: '', category: 'E-book' });
   const [existingImages, setExistingImages] = useState([]); // URLs from server
   const [newImages, setNewImages] = useState([]); // New File objects
-  const [newPreviews, setNewPreviews] = useState([]); // URLs for new files
+  const [newPreviews, setNewPreviews] = useState([]); // Array of { url, type, file }
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [cartOpen, setCartOpen] = useState(false);
@@ -51,19 +84,31 @@ export default function EditProductPage() {
     if (!files.length) return;
     
     if (existingImages.length + newImages.length + files.length > 5) {
-      return toast.error('Maksimal hanya 5 gambar yang diperbolehkan');
+      return toast.error('Maksimal hanya 5 file yang diperbolehkan');
     }
 
     const validFiles = files.filter(file => {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(`Ukuran gambar ${file.name} melebihi 5MB`);
+      const ftype = getFileType(file);
+      if (ftype === 'other') {
+        toast.error(`Format ${file.name} tidak didukung`);
+        return false;
+      }
+      let limit = 5 * 1024 * 1024;
+      if (['video', 'archive', 'document', 'pdf'].includes(ftype)) limit = MAX_FILE_SIZE;
+      
+      if (file.size > limit) {
+        toast.error(`Ukuran file ${file.name} melebihi batas (${limit / (1024 * 1024)}MB)`);
         return false;
       }
       return true;
     });
 
     setNewImages(prev => [...prev, ...validFiles]);
-    const newPrvs = validFiles.map(file => URL.createObjectURL(file));
+    const newPrvs = validFiles.map(file => ({
+      url: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      type: getFileType(file),
+      file
+    }));
     setNewPreviews(prev => [...prev, ...newPrvs]);
   };
 
@@ -136,9 +181,34 @@ export default function EditProductPage() {
               
               {totalImagesCount > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {existingImages.map((img, idx) => (
-                    <div key={`exist-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-                      <img src={img} alt={`existing-${idx}`} className="w-full h-full object-cover" />
+                  {existingImages.map((img, idx) => {
+                    const type = getUrlType(img);
+                    return (
+                    <div key={`exist-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center">
+                      {type === 'image' ? (
+                        <img src={img} alt={`existing-${idx}`} className="w-full h-full object-cover" />
+                      ) : type === 'video' ? (
+                        <div className="flex flex-col items-center gap-2 p-3">
+                          <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                            <span className="text-blue-500 font-bold text-xs">VIDEO</span>
+                          </div>
+                          <span className="text-[9px] font-bold text-blue-500 uppercase">Video</span>
+                        </div>
+                      ) : type === 'pdf' || type === 'document' ? (
+                        <div className="flex flex-col items-center gap-2 p-3">
+                          <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+                            <span className="text-red-500 font-bold text-xs">{type === 'pdf' ? 'PDF' : 'DOC'}</span>
+                          </div>
+                          <span className="text-[9px] font-bold text-red-500 uppercase">{type === 'pdf' ? 'PDF' : 'DOC'}</span>
+                        </div>
+                      ) : type === 'archive' ? (
+                        <div className="flex flex-col items-center gap-2 p-3">
+                          <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center">
+                            <span className="text-yellow-600 font-bold text-xs">ZIP</span>
+                          </div>
+                          <span className="text-[9px] font-bold text-yellow-600 uppercase">ARCHIVE</span>
+                        </div>
+                      ) : null}
                       <button type="button" onClick={(e) => {
                         e.stopPropagation();
                         setExistingImages(prev => prev.filter((_, i) => i !== idx));
@@ -148,9 +218,32 @@ export default function EditProductPage() {
                     </div>
                   ))}
                   
-                  {newPreviews.map((prev, idx) => (
-                    <div key={`new-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-                      <img src={prev} alt={`preview-${idx}`} className="w-full h-full object-cover" />
+                  {newPreviews.map((prevObj, idx) => (
+                    <div key={`new-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-center">
+                      {prevObj.type === 'image' && prevObj.url ? (
+                        <img src={prevObj.url} alt={`preview-${idx}`} className="w-full h-full object-cover" />
+                      ) : prevObj.type === 'video' ? (
+                        <div className="flex flex-col items-center gap-2 p-3">
+                          <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                            <span className="text-blue-500 font-bold text-xs">VIDEO</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate max-w-full px-1">{prevObj.file.name}</p>
+                        </div>
+                      ) : prevObj.type === 'pdf' || prevObj.type === 'document' ? (
+                        <div className="flex flex-col items-center gap-2 p-3">
+                          <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+                            <span className="text-red-500 font-bold text-xs">{prevObj.type === 'pdf' ? 'PDF' : 'DOC'}</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate max-w-full px-1">{prevObj.file.name}</p>
+                        </div>
+                      ) : prevObj.type === 'archive' ? (
+                        <div className="flex flex-col items-center gap-2 p-3">
+                          <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center">
+                            <span className="text-yellow-600 font-bold text-xs">ZIP</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate max-w-full px-1">{prevObj.file.name}</p>
+                        </div>
+                      ) : null}
                       <button type="button" onClick={(e) => {
                         e.stopPropagation();
                         setNewImages(imgs => imgs.filter((_, i) => i !== idx));
@@ -171,12 +264,12 @@ export default function EditProductPage() {
               ) : (
                 <div className="py-8">
                   <Upload size={40} className="text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500 font-bold">Klik untuk upload gambar</p>
-                  <p className="text-gray-400 text-sm mt-1 font-medium">PNG, JPG, WEBP · Maks 5MB · Hingga 5 Foto</p>
+                  <p className="text-gray-500 font-bold">Klik untuk upload file</p>
+                  <p className="text-gray-400 text-sm mt-1 font-medium">Gambar (5MB) · Video & File (50MB) · Maks 5 File</p>
                 </div>
               )}
             </div>
-            <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleImage} className="hidden" />
+            <input ref={fileRef} type="file" accept={ACCEPTED_TYPES} multiple onChange={handleImage} className="hidden" />
           </div>
 
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm rounded-2xl p-6 space-y-4 transition-colors">

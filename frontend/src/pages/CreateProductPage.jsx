@@ -11,13 +11,23 @@ const CATEGORIES = ['E-book', 'Course', 'Software', 'Template', 'Design', 'Video
 const ACCEPTED_TYPES = [
   'image/*',
   'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
+  'application/pdf', '.pdf',
+  '.zip', '.rar', '.7z', '.tar', '.gz',
+  '.doc', '.docx', '.epub', '.txt'
 ].join(',');
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB for video
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB for video/docs
 
 const getFileType = (file) => {
-  if (file.type.startsWith('image/')) return 'image';
-  if (file.type.startsWith('video/')) return 'video';
+  const type = file.type || '';
+  if (type.startsWith('image/')) return 'image';
+  if (type.startsWith('video/')) return 'video';
+  if (type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) return 'pdf';
+  
+  const ext = file.name.toLowerCase().split('.').pop();
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'archive';
+  if (['doc', 'docx', 'epub', 'txt'].includes(ext)) return 'document';
+  
   return 'other';
 };
 
@@ -43,9 +53,11 @@ export default function CreateProductPage() {
         toast.error(`Format ${file.name} tidak didukung`);
         return false;
       }
-      const limit = ftype === 'image' ? 5 * 1024 * 1024 : MAX_FILE_SIZE;
+      let limit = 5 * 1024 * 1024; // Default 5MB for image
+      if (['video', 'archive', 'document', 'pdf'].includes(ftype)) limit = MAX_FILE_SIZE; // 50MB for files
+      
       if (file.size > limit) {
-        toast.error(`${file.name} terlalu besar (maks ${ftype === 'image' ? '5MB' : '50MB'})`);
+        toast.error(`${file.name} terlalu besar (maks ${limit / (1024 * 1024)}MB)`);
         return false;
       }
       return true;
@@ -124,6 +136,24 @@ export default function CreateProductPage() {
                           <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate max-w-full px-1">{media.file.name}</p>
                           <span className="text-[9px] font-bold text-blue-500 uppercase">Video</span>
                         </div>
+                      ) : media.type === 'pdf' || media.type === 'document' ? (
+                        <div className="flex flex-col items-center gap-2 p-3">
+                          <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate max-w-full px-1">{media.file.name}</p>
+                          <span className="text-[9px] font-bold text-red-500 uppercase">{media.type === 'pdf' ? 'PDF' : 'DOC'}</span>
+                        </div>
+                      ) : media.type === 'archive' ? (
+                        <div className="flex flex-col items-center gap-2 p-3">
+                          <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center">
+                            <Package size={24} className="text-yellow-600" />
+                          </div>
+                          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 truncate max-w-full px-1">{media.file.name}</p>
+                          <span className="text-[9px] font-bold text-yellow-600 uppercase">ZIP/RAR</span>
+                        </div>
                       ) : null}
                       <button type="button" onClick={(e) => {
                         e.stopPropagation();
@@ -144,10 +174,12 @@ export default function CreateProductPage() {
                 <div className="py-8">
                   <Upload size={40} className="text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-500 font-bold">Klik untuk upload media</p>
-                  <p className="text-gray-400 text-sm mt-1 font-medium">Gambar (5MB) · Video (50MB) · Maks 5 File</p>
+                  <p className="text-gray-400 text-sm mt-1 font-medium">Gambar (5MB) · Video & File (50MB) · Maks 5 File</p>
                   <div className="flex justify-center gap-3 mt-3">
-                    <span className="px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-emerald-400 text-[10px] font-bold rounded-md">PNG JPG WEBP</span>
-                    <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-md">MP4 WEBM</span>
+                    <span className="px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-emerald-400 text-[10px] font-bold rounded-md">GAMBAR</span>
+                    <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-md">VIDEO</span>
+                    <span className="px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold rounded-md">PDF/DOC</span>
+                    <span className="px-2 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-500 text-[10px] font-bold rounded-md">ZIP/RAR</span>
                   </div>
                 </div>
               )}

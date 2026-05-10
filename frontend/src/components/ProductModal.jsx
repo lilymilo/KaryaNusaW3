@@ -13,6 +13,12 @@ const isVideoUrl = (url) => {
   return /\.(mp4|webm|mov|avi|ogv)(\?|$)/.test(lower);
 };
 
+const isPdfUrl = (url) => {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return /\.pdf(\?|$)/.test(lower);
+};
+
 export default function ProductModal({ product, onClose, initialWishlisted = false, onWishlistToggle }) {
   const { addToCart } = useCart();
   const { user } = useAuth();
@@ -215,6 +221,15 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                   className="w-full h-full object-contain bg-gray-50 dark:bg-gray-800"
                   onClick={(e) => e.stopPropagation()}
                 />
+              ) : isPdfUrl(currentImage) ? (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 p-6">
+                  <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+                    <span className="text-red-500 font-bold text-xl">PDF</span>
+                  </div>
+                  <a href={currentImage} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors shadow-sm" onClick={e => e.stopPropagation()}>
+                    Buka Dokumen PDF
+                  </a>
+                </div>
               ) : (
                 <img src={currentImage} alt={product.name}
                   className="w-full h-full object-contain bg-gray-50 dark:bg-gray-800 transition-transform duration-700 group-hover:scale-105"
@@ -254,11 +269,15 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                     className={`shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 transition-all ${idx === currentImageIndex ? 'border-green-500' : 'border-transparent opacity-60 hover:opacity-100 bg-gray-100 dark:bg-gray-800'}`}
                   >
                     {isVideoUrl(img) ? (
-                      <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-gray-500"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
+                        <span className="text-blue-500 font-bold text-[10px]">VIDEO</span>
+                      </div>
+                    ) : isPdfUrl(img) ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800">
+                        <span className="text-red-500 font-bold text-[10px]">PDF</span>
                       </div>
                     ) : (
-                      <img src={img} alt={`thumb-${idx}`} className="w-full h-full object-cover" />
+                      <img src={img} alt="" className="w-full h-full object-cover" />
                     )}
                   </button>
                 ))}

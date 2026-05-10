@@ -11,6 +11,11 @@ const isVideoUrl = (url) => {
   return /\.(mp4|webm|mov|avi|ogv)(\?|$)/i.test(url);
 };
 
+const isPdfUrl = (url) => {
+  if (!url) return false;
+  return /\.pdf(\?|$)/i.test(url);
+};
+
 function ProductCard({ product, onClick, onDelete, onEdit, initialWishlisted = false, onWishlistToggle }) {
   const { addToCart } = useCart();
   const { user } = useAuth();
@@ -68,6 +73,12 @@ function ProductCard({ product, onClick, onDelete, onEdit, initialWishlisted = f
               <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </div>
             <span className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/60 text-white text-[9px] font-bold rounded">VIDEO</span>
+          </div>
+        ) : isPdfUrl(product.image) ? (
+          <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center relative">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-500/20 flex items-center justify-center">
+              <span className="text-red-500 font-black text-xs sm:text-sm">PDF</span>
+            </div>
           </div>
         ) : (
           <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
