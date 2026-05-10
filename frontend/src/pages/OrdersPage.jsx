@@ -59,6 +59,25 @@ function RatingModal({ item, orderId, onClose, onSuccess }) {
   );
 }
 
+const isUrlPrimaryType = (currentUrl, allUrls) => {
+  const getExt = (u) => {
+    try { return new URL(u).pathname.split('.').pop().toLowerCase(); }
+    catch { return u.split('.').pop().toLowerCase(); }
+  };
+  
+  const allExts = allUrls.map(getExt);
+  const currentExt = getExt(currentUrl);
+  
+  const isZip = (ext) => ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext);
+  const isPdf = (ext) => ext === 'pdf';
+  const isVideo = (ext) => ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext);
+
+  if (allExts.some(isZip)) return isZip(currentExt);
+  if (allExts.some(isPdf)) return isPdf(currentExt);
+  if (allExts.some(isVideo)) return isVideo(currentExt);
+  return true; // If no zip/pdf/video, everything is primary (e.g. photos)
+};
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -173,9 +192,19 @@ export default function OrdersPage() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             {(() => {
                                const images = item.products?.images?.length ? item.products.images : (item.products?.image ? [item.products.image] : []);
-                               return images.map((url, idx) => (
-                                 <DownloadButton key={idx} url={url} defaultName={`${(item.products?.name || 'product').replace(/[^a-zA-Z0-9]/g, '_')}_file_${idx + 1}`} />
-                               ));
+                               return images.map((url, idx) => {
+                                 const isPrimary = isUrlPrimaryType(url, images);
+                                 const isPreview = !isPrimary;
+                                 return (
+                                   <DownloadButton 
+                                     key={idx} 
+                                     url={url} 
+                                     defaultName={`${(item.products?.name || 'product').replace(/[^a-zA-Z0-9]/g, '_')}_file_${idx + 1}`} 
+                                     isPrimary={isPrimary}
+                                     isPreview={isPreview}
+                                   />
+                                 );
+                               });
                             })()}
                           </div>
                         </div>
