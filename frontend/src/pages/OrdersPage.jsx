@@ -5,6 +5,7 @@ import { formatPrice, formatDate } from '../utils/format';
 import api from '../api/axios';
 import Navbar from '../components/Navbar';
 import CartDrawer from '../components/CartDrawer';
+import DownloadButton from '../components/DownloadButton';
 import toast from 'react-hot-toast';
 
 function RatingModal({ item, orderId, onClose, onSuccess }) {
@@ -148,18 +149,37 @@ export default function OrdersPage() {
 
                 <div className="space-y-2 mb-3">
                   {order.order_items?.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2.5 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
-                      <img src={item.products?.image} alt={item.products?.name}
-                        className="w-10 h-10 object-cover rounded-lg flex-shrink-0 bg-white dark:bg-gray-900"
-                        onError={e => { e.target.style.display = 'none'; }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{item.products?.name}</p>
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">x{item.quantity} · <span className="text-gray-900 dark:text-white">{formatPrice(item.price)}</span></p>
+                    <div key={i} className="flex flex-col gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <img src={item.products?.image} alt={item.products?.name}
+                          className="w-12 h-12 object-cover rounded-lg flex-shrink-0 bg-white dark:bg-gray-900 shadow-sm"
+                          onError={e => { e.target.style.display = 'none'; }} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{item.products?.name}</p>
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">x{item.quantity} · <span className="text-gray-900 dark:text-white">{formatPrice(item.price)}</span></p>
+                        </div>
+                        <button onClick={() => setRatingItem({ ...item, name: item.products?.name })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-lg text-xs font-bold text-yellow-600 hover:bg-yellow-50 hover:border-yellow-200 transition-colors flex-shrink-0">
+                          <Star size={12} className="fill-yellow-500 text-yellow-500" /> Beri Rating
+                        </button>
                       </div>
-                      <button onClick={() => setRatingItem({ ...item, name: item.products?.name })}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-lg text-xs font-bold text-yellow-600 hover:bg-yellow-50 hover:border-yellow-200 transition-colors flex-shrink-0">
-                        <Star size={12} className="fill-yellow-500 text-yellow-500" /> Beri Rating
-                      </button>
+
+                      {(order.status === 'completed' || order.status === 'processing') && (
+                        <div className="pt-3 border-t border-gray-200 dark:border-gray-700 mt-1">
+                          <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                            <Package size={12} className="text-green-600 dark:text-emerald-400" />
+                            Pusat Unduhan File Digital
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {(() => {
+                               const images = item.products?.images?.length ? item.products.images : (item.products?.image ? [item.products.image] : []);
+                               return images.map((url, idx) => (
+                                 <DownloadButton key={idx} url={url} defaultName={`${(item.products?.name || 'product').replace(/[^a-zA-Z0-9]/g, '_')}_file_${idx + 1}`} />
+                               ));
+                            })()}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
