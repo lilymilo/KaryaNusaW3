@@ -247,47 +247,41 @@ export const requestPayout = async (req, res) => {
     
     console.log(`[Auto-Payout] Memulai proses untuk chain: ${chain}, Amount: ${amount}`);
 
-    // 3. Attempt auto-payout only if private key AND explicit RPC URL exist
-    //    Without ETH_RPC_URL, skip auto-transfer → record as 'pending' for manual processing
+    // 3. Process payout
     if (chain === 'evm' && process.env.MERCHANT_PRIVATE_KEY && process.env.ETH_RPC_URL) {
+      // Mode: Crypto auto-transfer (only when RPC is configured)
       try {
         const provider = new ethers.JsonRpcProvider(process.env.ETH_RPC_URL);
         
-        // Quick connectivity check with 5s timeout — prevents hanging forever
         await Promise.race([
           provider.getBlockNumber(),
           new Promise((_, reject) => setTimeout(() => reject(new Error('RPC timeout')), 5000))
         ]);
 
         const wallet = new ethers.Wallet(process.env.MERCHANT_PRIVATE_KEY, provider);
-        
-        // Konversi IDR ke ETH (Asumsi 1 ETH = Rp 50.000.000)
         const ethAmount = (amount / 50000000).toFixed(12);
-        
-        console.log(`[Auto-Payout ETH] Mengirim ${ethAmount} ETH ke ${wallet_address}...`);
         
         const merchantBalance = await provider.getBalance(wallet.address);
         const amountWei = ethers.parseEther(ethAmount);
         
         if (merchantBalance < amountWei) {
-          throw new Error(`Saldo Merchant tidak mencukupi. Saldo: ${ethers.formatEther(merchantBalance)} ETH`);
+          throw new Error(`Saldo Merchant tidak mencukupi`);
         }
 
-        const tx = await wallet.sendTransaction({
-          to: wallet_address,
-          value: amountWei
-        });
-        
-        console.log(`[Auto-Payout ETH] Transaksi dikirim: ${tx.hash}. Menunggu konfirmasi...`);
+        const tx = await wallet.sendTransaction({ to: wallet_address, value: amountWei });
         await tx.wait(); 
         txHash = tx.hash;
         finalStatus = 'completed';
         console.log(`[Auto-Payout ETH] Sukses! Hash: ${txHash}`);
       } catch (err) {
-        console.error('[Auto-Payout ETH] Gagal, fallback ke pending:', err.message);
-        // Don't refund — just fall through to insert as 'pending' for manual processing
+        console.error('[Auto-Payout ETH] Gagal:', err.message);
         finalStatus = 'pending';
       }
+    } else {
+      // Mode: Internal ledger — langsung completed tanpa crypto transfer
+      finalStatus = 'completed';
+      txHash = `INTERNAL_${Date.now()}`;
+      console.log(`[Payout] Internal ledger mode — langsung completed`);
     }
 
     // 4. Record payout request (only for 'pending' or 'completed')
