@@ -63,7 +63,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4 py-20 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4 py-10 sm:py-20 relative overflow-hidden transition-colors duration-300">
 
       <Link to="/" className="absolute top-6 left-6 z-50 flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-green-600 transition-colors font-medium">
         <ArrowLeft size={20} />
@@ -83,7 +83,7 @@ export default function LoginPage() {
           <p className="text-gray-500 dark:text-gray-400 font-medium mt-2">Masuk ke dashboard Anda</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group transition-colors">
+        <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-5 sm:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group transition-colors">
           <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
 
 

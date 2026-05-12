@@ -134,7 +134,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4 py-20 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4 py-10 sm:py-20 relative overflow-hidden transition-colors duration-300">
 
       <Link to="/" className="absolute top-6 left-6 z-50 flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-green-600 transition-colors font-medium">
         <ArrowLeft size={20} />
@@ -154,7 +154,7 @@ export default function RegisterPage() {
           <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">Isi data akun Anda di bawah ini</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative z-10 transition-colors">
+        <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-5 sm:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative z-10 transition-colors">
 
           <div className="mb-6">
           </div>
@@ -180,7 +180,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">USERNAME</label>
                 <input type="text" placeholder="user123" required
@@ -205,7 +205,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">PASSWORD</label>
                 <div className="relative">
@@ -231,7 +231,7 @@ export default function RegisterPage() {
             </div>
 
             {form.password && (
-              <div className="grid grid-cols-2 gap-2 mt-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
                 {validations.map((v, i) => (
                   <div key={i} className={`flex items-center gap-1.5 text-[10px] sm:text-xs font-bold transition-colors ${v.valid ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
                     {v.valid ? <Check size={14} /> : <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 ml-1 mr-1" />}
