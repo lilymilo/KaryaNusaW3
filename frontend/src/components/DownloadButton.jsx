@@ -53,36 +53,62 @@ export default function DownloadButton({ url, defaultName, isPrimary, isPreview 
   };
 
   const urlFilename = getFilenameFromUrl(url);
-  const fileName = defaultName ? `${defaultName}.${ext || 'file'}` : (urlFilename || `download.${ext || 'file'}`);
+  const cleanDefaultName = defaultName ? defaultName.replace(new RegExp(`\\.${ext}$`, 'i'), '') : '';
+  const fileName = defaultName ? `${cleanDefaultName}.${ext || 'file'}` : (urlFilename || `download.${ext || 'file'}`);
 
   const handleDownload = async () => {
     if (loading || isPreview) return;
+    
+    const isArchive = ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext);
     
     setLoading(true);
     toast.loading(`Mendownload ${fileName}...`, { id: `dl-${url}` });
     
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      
-      const blobUrl = window.URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = blobUrl;
-      a.download = fileName;
-      
-      document.body.appendChild(a);
-      a.click();
-      
-      window.URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
-      
-      toast.success(`${fileName} berhasil diunduh!`, { id: `dl-${url}` });
+      if (isArchive) {
+        // ── ARCHIVE FILES: direct link download (prevents double-zip) ──
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = fileName;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+          document.body.removeChild(a);
+        }, 100);
+        
+        toast.success(`${fileName} berhasil diunduh!`, { id: `dl-${url}` });
+      } else {
+        // ── NON-ARCHIVE FILES: blob fetch for forced download ──
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const rawBlob = await response.blob();
+        
+        // Force application/octet-stream to prevent browser from displaying inline
+        const blob = new Blob([rawBlob], { type: 'application/octet-stream' });
+        
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = blobUrl;
+        a.download = fileName;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        window.URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(a);
+        
+        toast.success(`${fileName} berhasil diunduh!`, { id: `dl-${url}` });
+      }
     } catch (err) {
       console.error("Download error:", err);
-      toast.error(`Gagal mendownload via Blob, membuka tab baru...`, { id: `dl-${url}` });
+      toast.error(`Gagal mendownload, membuka tab baru...`, { id: `dl-${url}` });
       // Fallback to standard open in new tab if CORS or other network issue
       window.open(url, '_blank');
     } finally {

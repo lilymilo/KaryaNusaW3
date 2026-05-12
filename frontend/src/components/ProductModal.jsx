@@ -88,7 +88,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
   const canAccessMedia = user && (user.id === product.seller_id || hasPurchased);
 
   const mergedProduct = fullProduct || product;
-  const productImages = mergedProduct?.images?.length ? mergedProduct.images : [mergedProduct?.image || product?.image];
+  const productImages = mergedProduct?.images?.length ? mergedProduct.images : [mergedProduct?.image || product?.image].filter(Boolean);
   const currentImage = productImages[currentImageIndex] || product?.image;
   const touchStartX = useRef(0);
   const isSwiping = useRef(false);
@@ -359,7 +359,7 @@ export default function ProductModal({ product, onClose, initialWishlisted = fal
                         {product.profiles?.shop_name || product.profiles?.full_name || product.sellerName || product.seller_name}
                       </Link>
                     </div>
-                    <div className="pt-2">
+                    <div className="pt-2 max-h-60 overflow-y-auto">
                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap text-sm sm:text-[15px]">
                           {description}
                        </p>

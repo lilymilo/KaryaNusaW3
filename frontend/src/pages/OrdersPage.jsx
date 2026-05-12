@@ -65,17 +65,19 @@ const isUrlPrimaryType = (currentUrl, allUrls) => {
     catch { return u.split('.').pop().toLowerCase(); }
   };
   
-  const allExts = allUrls.map(getExt);
   const currentExt = getExt(currentUrl);
   
-  const isZip = (ext) => ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext);
+  const isArchive = (ext) => ['zip', 'rar', '7z', 'tar', 'gz'].includes(ext);
   const isPdf = (ext) => ext === 'pdf';
   const isVideo = (ext) => ['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext);
 
-  if (allExts.some(isZip)) return isZip(currentExt);
-  if (allExts.some(isPdf)) return isPdf(currentExt);
-  if (allExts.some(isVideo)) return isVideo(currentExt);
-  return true; // If no zip/pdf/video, everything is primary (e.g. photos)
+  // Archives, PDFs, and Videos are always primary (downloadable)
+  if (isArchive(currentExt) || isPdf(currentExt) || isVideo(currentExt)) return true;
+
+  // Images are preview ONLY when there's a "real" file (archive/pdf/video) present
+  const allExts = allUrls.map(getExt);
+  const hasRealFile = allExts.some(e => isArchive(e) || isPdf(e) || isVideo(e));
+  return !hasRealFile; // Images are primary only if no other "real" file exists
 };
 
 export default function OrdersPage() {
@@ -89,7 +91,11 @@ export default function OrdersPage() {
     try {
       const { data } = await api.get('/orders');
       setOrders(data);
-    } catch { setOrders([]); }
+    } catch (err) {
+      console.error('Gagal memuat pesanan:', err);
+      toast.error('Gagal memuat pesanan. Periksa koneksi Anda.');
+      setOrders([]);
+    }
     finally { setLoading(false); }
   };
 
