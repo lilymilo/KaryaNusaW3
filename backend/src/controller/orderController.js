@@ -244,7 +244,6 @@ export const requestPayout = async (req, res) => {
 
     let txHash = null;
     let finalStatus = 'pending';
-    let refunded = false;
     
     console.log(`[Auto-Payout] Memulai proses untuk chain: ${chain}, Amount: ${amount}`);
 
@@ -292,13 +291,17 @@ export const requestPayout = async (req, res) => {
           p_user_id: req.user.id,
           p_amount: Number(amount)
         });
-        finalStatus = 'failed';
-        refunded = true;
         console.log(`[Auto-Payout ETH] Saldo ${amount} telah di-refund ke user ${req.user.id}`);
+        // Return immediately — don't insert a payout record for failed attempts
+        return res.json({ 
+          message: 'Penarikan gagal — saldo telah dikembalikan. Silakan coba lagi nanti.',
+          data: null,
+          refunded: true 
+        });
       }
     }
 
-    // 4. Record payout request
+    // 4. Record payout request (only for 'pending' or 'completed')
     const { data, error: payoutError } = await adminClient.from('payout_requests')
       .insert([{
         user_id: req.user.id,
@@ -312,20 +315,9 @@ export const requestPayout = async (req, res) => {
       .single();
 
     if (payoutError) {
-      // Refund if DB insert fails AND we haven't refunded already
-      if (!refunded) {
-        await adminClient.rpc('increment_balance', { p_user_id: req.user.id, p_amount: Number(amount) });
-      }
+      // Refund if DB insert fails
+      await adminClient.rpc('increment_balance', { p_user_id: req.user.id, p_amount: Number(amount) });
       throw payoutError;
-    }
-
-    // 5. Respond with appropriate message
-    if (finalStatus === 'failed') {
-      return res.json({ 
-        message: 'Penarikan gagal — saldo telah dikembalikan. Silakan coba lagi nanti.',
-        data,
-        refunded: true 
-      });
     }
 
     const resMsg = finalStatus === 'completed' 
