@@ -219,12 +219,13 @@ export const updateOrderStatus = async (req, res) => {
 export const requestPayout = async (req, res) => {
   try {
     const { amount, wallet_address, chain } = req.body;
-    const authSupabase = getAuthClient(req);
+    const adminClient = supabaseAdmin || getAuthClient(req);
 
     if (!amount || amount <= 0) return res.status(400).json({ error: "Jumlah penarikan tidak valid" });
     if (!wallet_address) return res.status(400).json({ error: "Alamat wallet tujuan wajib diisi" });
 
-    const { data: profile, error: profileErr } = await (supabaseAdmin || authSupabase).from('profiles')
+    // 1. Check current balance
+    const { data: profile, error: profileErr } = await adminClient.from('profiles')
       .select('balance')
       .eq('id', req.user.id)
       .single();
@@ -234,24 +235,34 @@ export const requestPayout = async (req, res) => {
       return res.status(400).json({ error: "Saldo tidak mencukupi" });
     }
 
-    const { error: deductError } = await (supabaseAdmin || authSupabase).rpc('increment_balance', {
+    // 2. Deduct balance (optimistic)
+    const { error: deductError } = await adminClient.rpc('increment_balance', {
       p_user_id: req.user.id,
       p_amount: -Number(amount)
     });
-
     if (deductError) throw deductError;
 
     let txHash = null;
     let finalStatus = 'pending';
+    let refunded = false;
     
     console.log(`[Auto-Payout] Memulai proses untuk chain: ${chain}, Amount: ${amount}`);
+
+    // 3. Attempt auto-payout only if private key exists
     if (chain === 'evm' && process.env.MERCHANT_PRIVATE_KEY) {
       try {
-        const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545'); // Hardhat local
+        const rpcUrl = process.env.ETH_RPC_URL || 'http://127.0.0.1:8545';
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        
+        // Quick connectivity check with 5s timeout — prevents hanging forever
+        await Promise.race([
+          provider.getBlockNumber(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('RPC provider timeout (5s) — node mungkin tidak aktif')), 5000))
+        ]);
+
         const wallet = new ethers.Wallet(process.env.MERCHANT_PRIVATE_KEY, provider);
         
         // Konversi IDR ke ETH (Asumsi 1 ETH = Rp 50.000.000)
-        // Gunakan presisi yang lebih tinggi untuk ethers.parseEther
         const ethAmount = (amount / 50000000).toFixed(12);
         
         console.log(`[Auto-Payout ETH] Mengirim ${ethAmount} ETH ke ${wallet_address}...`);
@@ -261,7 +272,7 @@ export const requestPayout = async (req, res) => {
         const amountWei = ethers.parseEther(ethAmount);
         
         if (merchantBalance < amountWei) {
-            throw new Error(`Saldo Merchant (Hardhat) tidak mencukupi untuk penarikan ini. Saldo: ${ethers.formatEther(merchantBalance)} ETH`);
+          throw new Error(`Saldo Merchant tidak mencukupi. Saldo: ${ethers.formatEther(merchantBalance)} ETH`);
         }
 
         const tx = await wallet.sendTransaction({
@@ -276,12 +287,19 @@ export const requestPayout = async (req, res) => {
         console.log(`[Auto-Payout ETH] Sukses! Hash: ${txHash}`);
       } catch (err) {
         console.error('[Auto-Payout ETH] Gagal transfer kripto:', err.message);
-        // Jika gagal karena saldo atau teknis, status tetap pending agar bisa diproses admin
-        finalStatus = 'pending'; 
+        // REFUND balance on crypto failure — don't let user lose money
+        await adminClient.rpc('increment_balance', {
+          p_user_id: req.user.id,
+          p_amount: Number(amount)
+        });
+        finalStatus = 'failed';
+        refunded = true;
+        console.log(`[Auto-Payout ETH] Saldo ${amount} telah di-refund ke user ${req.user.id}`);
       }
     }
 
-    const { data, error: payoutError } = await (supabaseAdmin || authSupabase).from('payout_requests')
+    // 4. Record payout request
+    const { data, error: payoutError } = await adminClient.from('payout_requests')
       .insert([{
         user_id: req.user.id,
         amount: Number(amount),
@@ -294,15 +312,27 @@ export const requestPayout = async (req, res) => {
       .single();
 
     if (payoutError) {
-      await (supabaseAdmin || authSupabase).rpc('increment_balance', { p_user_id: req.user.id, p_amount: Number(amount) });
+      // Refund if DB insert fails AND we haven't refunded already
+      if (!refunded) {
+        await adminClient.rpc('increment_balance', { p_user_id: req.user.id, p_amount: Number(amount) });
+      }
       throw payoutError;
+    }
+
+    // 5. Respond with appropriate message
+    if (finalStatus === 'failed') {
+      return res.json({ 
+        message: 'Penarikan gagal — saldo telah dikembalikan. Silakan coba lagi nanti.',
+        data,
+        refunded: true 
+      });
     }
 
     const resMsg = finalStatus === 'completed' 
       ? "Pencairan dana otomatis berhasil! Saldo telah masuk ke wallet Anda."
       : "Permintaan pencairan dana diterima! Sedang dalam proses manual.";
 
-    res.json({ message: resMsg, data });
+    res.json({ message: resMsg, data, refunded: false });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

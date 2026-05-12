@@ -4,7 +4,10 @@ const router = express.Router();
 import { register, login, walletLogin, linkWallet, getAccount, logout, updateProfile, setPassword } from '../controller/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB for avatar/logo/banner
+});
 
 router.post('/register', register);
 router.post('/login', login);

@@ -214,8 +214,15 @@ export default function ProfilePage() {
         wallet_address: user.wallet_address,
         chain: 'evm'
       });
-      toast.success(data.message || 'Permintaan penarikan berhasil dikirim!');
-      updateUserData({ ...user, balance: user.balance - amount });
+      
+      // Only deduct balance in UI if NOT refunded
+      if (data.refunded) {
+        toast.error(data.message || 'Penarikan gagal — saldo dikembalikan');
+      } else {
+        toast.success(data.message || 'Permintaan penarikan berhasil dikirim!');
+        updateUserData({ ...user, balance: user.balance - amount });
+      }
+      
       fetchPayouts();
       e.target.reset();
     } catch (err) {

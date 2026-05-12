@@ -106,32 +106,58 @@ export const createProduct = async (req, res) => {
 
     let imageUrl = null;
     let imagesArr = [];
+    let mainFileUrl = null;
 
     const authSupabase = getAuthClient(req);
 
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const fileExt = file.originalname.split('.').pop();
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const filePath = `${req.user.id}/${fileName}`;
+    // Helper: upload a single file to Supabase storage
+    const uploadFile = async (file) => {
+      const fileExt = file.originalname.split('.').pop();
+      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+      const filePath = `${req.user.id}/${fileName}`;
 
-        const { error: uploadError } = await authSupabase.storage
-          .from('products')
-          .upload(filePath, file.buffer, {
-            contentType: file.mimetype,
-            upsert: true
-          });
+      const { error: uploadError } = await authSupabase.storage
+        .from('products')
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true
+        });
 
-        if (uploadError) throw new Error(`Gagal mengupload gambar: ${uploadError.message}`);
+      if (uploadError) throw new Error(`Gagal mengupload file: ${uploadError.message}`);
 
-        const { data: { publicUrl } } = authSupabase.storage
-          .from('products')
-          .getPublicUrl(filePath);
-        
-        imagesArr.push(publicUrl);
-      }
-      imageUrl = imagesArr[0];
+      const { data: { publicUrl } } = authSupabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+      
+      return publicUrl;
+    };
+
+    // Handle new field structure: covers + main_file (or fallback to legacy 'images')
+    const coverFiles = req.files?.['covers'] || [];
+    const mainFiles = req.files?.['main_file'] || [];
+    const legacyFiles = req.files?.['images'] || [];
+
+    // Upload main file (ZIP/PDF/DOC) if present
+    if (mainFiles.length > 0) {
+      mainFileUrl = await uploadFile(mainFiles[0]);
     }
+
+    // Upload covers (images/videos)
+    for (const file of coverFiles) {
+      const url = await uploadFile(file);
+      imagesArr.push(url);
+    }
+
+    // Fallback: handle legacy 'images' field (backward compat)
+    if (coverFiles.length === 0 && mainFiles.length === 0 && legacyFiles.length > 0) {
+      for (const file of legacyFiles) {
+        const url = await uploadFile(file);
+        imagesArr.push(url);
+      }
+    }
+
+    // Determine cover image: first cover, or main file URL if no covers
+    imageUrl = imagesArr[0] || mainFileUrl || null;
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -154,7 +180,8 @@ export const createProduct = async (req, res) => {
         category: category || 'Other',
         stock: stock !== undefined && stock !== '' && stock !== null ? Number(stock) : null,
         image: imageUrl,
-        images: imagesArr
+        images: imagesArr,
+        main_file_url: mainFileUrl
       }])
       .select();
 
@@ -237,7 +264,7 @@ export const createProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, description, category, stock, existing_images } = req.body;
+    const { name, price, description, category, stock, existing_images, existing_main_file_url } = req.body;
     
     let updateData = {};
     if (name) updateData.name = name;
@@ -257,32 +284,52 @@ export const updateProduct = async (req, res) => {
 
     const authSupabase = getAuthClient(req);
 
-    if (req.files && req.files.length > 0) {
+    // Helper: upload a single file to Supabase storage
+    const uploadFile = async (file) => {
+      const fileExt = file.originalname.split('.').pop();
+      const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+      const filePath = `${req.user.id}/${fileName}`;
+
+      const { error: uploadError } = await authSupabase.storage
+        .from('products')
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true
+        });
+
+      if (uploadError) throw new Error(`Gagal mengupload file: ${uploadError.message}`);
+
+      const { data: { publicUrl } } = authSupabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+      
+      return publicUrl;
+    };
+
+    // Handle new field structure: covers + main_file (or fallback to legacy 'images')
+    const coverFiles = req.files?.['covers'] || [];
+    const mainFiles = req.files?.['main_file'] || [];
+    const legacyFiles = req.files?.['images'] || [];
+
+    // Upload new main file if present
+    if (mainFiles.length > 0) {
+      updateData.main_file_url = await uploadFile(mainFiles[0]);
+    } else if (existing_main_file_url !== undefined) {
+      updateData.main_file_url = existing_main_file_url || null;
+    }
+
+    // Upload new covers
+    if (coverFiles.length > 0 || legacyFiles.length > 0) {
       let imagesArr = [...oldImages];
-      for (const file of req.files) {
-        const fileExt = file.originalname.split('.').pop();
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const filePath = `${req.user.id}/${fileName}`;
-
-        const { error: uploadError } = await authSupabase.storage
-          .from('products')
-          .upload(filePath, file.buffer, {
-            contentType: file.mimetype,
-            upsert: true
-          });
-
-        if (uploadError) throw new Error(`Gagal mengupload gambar baru: ${uploadError.message}`);
-
-        const { data: { publicUrl } } = authSupabase.storage
-          .from('products')
-          .getPublicUrl(filePath);
-        
-        imagesArr.push(publicUrl);
+      const filesToUpload = coverFiles.length > 0 ? coverFiles : legacyFiles;
+      for (const file of filesToUpload) {
+        const url = await uploadFile(file);
+        imagesArr.push(url);
       }
-      updateData.image = imagesArr[0];
+      updateData.image = imagesArr[0] || updateData.main_file_url || null;
       updateData.images = imagesArr;
     } else if (existing_images) {
-      updateData.image = oldImages[0] || null;
+      updateData.image = oldImages[0] || updateData.main_file_url || null;
       updateData.images = oldImages;
     }
 

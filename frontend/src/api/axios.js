@@ -2,12 +2,18 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:5003/api',
-  timeout: 15000,
+  timeout: 30000, // 30s default (was 15s — too short for mobile)
 });
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  
+  // Extend timeout for file uploads (multipart/form-data)
+  if (config.data instanceof FormData) {
+    config.timeout = 120000; // 2 minutes for uploads
+  }
+  
   return config;
 });
 
