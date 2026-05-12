@@ -247,16 +247,16 @@ export const requestPayout = async (req, res) => {
     
     console.log(`[Auto-Payout] Memulai proses untuk chain: ${chain}, Amount: ${amount}`);
 
-    // 3. Attempt auto-payout only if private key exists
-    if (chain === 'evm' && process.env.MERCHANT_PRIVATE_KEY) {
+    // 3. Attempt auto-payout only if private key AND explicit RPC URL exist
+    //    Without ETH_RPC_URL, skip auto-transfer → record as 'pending' for manual processing
+    if (chain === 'evm' && process.env.MERCHANT_PRIVATE_KEY && process.env.ETH_RPC_URL) {
       try {
-        const rpcUrl = process.env.ETH_RPC_URL || 'http://127.0.0.1:8545';
-        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const provider = new ethers.JsonRpcProvider(process.env.ETH_RPC_URL);
         
         // Quick connectivity check with 5s timeout — prevents hanging forever
         await Promise.race([
           provider.getBlockNumber(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('RPC provider timeout (5s) — node mungkin tidak aktif')), 5000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('RPC timeout')), 5000))
         ]);
 
         const wallet = new ethers.Wallet(process.env.MERCHANT_PRIVATE_KEY, provider);
@@ -266,7 +266,6 @@ export const requestPayout = async (req, res) => {
         
         console.log(`[Auto-Payout ETH] Mengirim ${ethAmount} ETH ke ${wallet_address}...`);
         
-        // Cek saldo merchant sebelum kirim
         const merchantBalance = await provider.getBalance(wallet.address);
         const amountWei = ethers.parseEther(ethAmount);
         
@@ -285,19 +284,9 @@ export const requestPayout = async (req, res) => {
         finalStatus = 'completed';
         console.log(`[Auto-Payout ETH] Sukses! Hash: ${txHash}`);
       } catch (err) {
-        console.error('[Auto-Payout ETH] Gagal transfer kripto:', err.message);
-        // REFUND balance on crypto failure — don't let user lose money
-        await adminClient.rpc('increment_balance', {
-          p_user_id: req.user.id,
-          p_amount: Number(amount)
-        });
-        console.log(`[Auto-Payout ETH] Saldo ${amount} telah di-refund ke user ${req.user.id}`);
-        // Return immediately — don't insert a payout record for failed attempts
-        return res.json({ 
-          message: 'Penarikan gagal — saldo telah dikembalikan. Silakan coba lagi nanti.',
-          data: null,
-          refunded: true 
-        });
+        console.error('[Auto-Payout ETH] Gagal, fallback ke pending:', err.message);
+        // Don't refund — just fall through to insert as 'pending' for manual processing
+        finalStatus = 'pending';
       }
     }
 
