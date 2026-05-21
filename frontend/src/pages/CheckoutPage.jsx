@@ -6,6 +6,7 @@ import { useWallet, WALLET_TYPES } from '../context/WalletContext';
 import { formatPrice } from '../utils/format';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import { loadSnap } from '../utils/snapLoader';
 
 const PAYMENT_METHODS = [
   { id: 'qris', label: 'QRIS / E-Wallet', icon: Wallet, desc: 'GoPay, OVO, Dana, LinkAja' },
@@ -119,9 +120,10 @@ export default function CheckoutPage() {
     }
 
     const isCrypto = form.paymentMethod === 'crypto';
+    const isQris = form.paymentMethod === 'qris';
 
     let validatedPhone = null;
-    if (!isCrypto) {
+    if (!isCrypto && !isQris) {
       if (!form.phone) return toast.error('Nomor telepon wajib diisi untuk pembayaran reguler');
       validatedPhone = validateWA(form.phone);
       if (!validatedPhone) {
@@ -148,6 +150,76 @@ export default function CheckoutPage() {
     let txHash = null;
 
     try {
+      // ══════════════════════════════════════════════
+      // QRIS Payment Flow (Midtrans Snap)
+      // ══════════════════════════════════════════════
+      if (isQris) {
+        setTxStatus('confirming');
+
+        // 1. Buat order dulu (status: pending)
+        const orderPayload = {
+          items: checkoutItems.map((item) => ({
+            productId: item.product_id,
+            quantity: item.quantity,
+            price: item.products?.price,
+            name: item.products?.name,
+          })),
+          total_amount: checkoutTotal,
+          delivery_email: form.delivery_email,
+          phone: validatedPhone,
+          payment_method: 'qris',
+          notes: form.notes,
+          is_direct: isDirect,
+        };
+
+        const { data: orderRes } = await api.post('/orders', orderPayload);
+        const orderId = orderRes.orderId;
+
+        // 2. Buat transaksi Midtrans
+        const { data: paymentRes } = await api.post('/payment/create-qris', {
+          orderId,
+          amount: checkoutTotal,
+          email: form.delivery_email,
+          phone: validatedPhone,
+          items: checkoutItems.map((item) => ({
+            id: item.product_id,
+            name: item.products?.name || 'Produk Digital',
+            price: item.products?.price,
+            quantity: item.quantity,
+          })),
+        });
+
+        // 3. Load & open Midtrans Snap popup
+        const snap = await loadSnap();
+        setTxStatus('');
+
+        snap.pay(paymentRes.snapToken, {
+          onSuccess: () => {
+            if (!isDirect) clearCart();
+            toast.success('Pembayaran QRIS berhasil!');
+            navigate(`/order-success/${orderId}`, { replace: true });
+          },
+          onPending: () => {
+            if (!isDirect) clearCart();
+            toast('Menunggu pembayaran...', { icon: '⏳' });
+            navigate(`/order-success/${orderId}`, { replace: true });
+          },
+          onError: (result) => {
+            console.error('[Snap] Error:', result);
+            toast.error('Pembayaran gagal. Silakan coba lagi.');
+          },
+          onClose: () => {
+            toast('Pembayaran dibatalkan. Anda bisa mencoba lagi.', { icon: '⚠️' });
+          },
+        });
+
+        setLoading(false);
+        return; // Exit — Snap popup handles the rest
+      }
+
+      // ══════════════════════════════════════════════
+      // Crypto Payment Flow (existing)
+      // ══════════════════════════════════════════════
       if (isCrypto) {
         cryptoPhaseRef.current = 'confirming';
         setTxStatus('confirming');

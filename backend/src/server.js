@@ -12,6 +12,7 @@ import shopRoutes from './routes/shopRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import socialRoutes from './routes/socialRoutes.js';
 import threadRoutes from './routes/threadRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 
 const app = express();
 
@@ -61,6 +62,7 @@ app.use('/api/shop', shopRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/threads', threadRoutes);
+app.use('/api/payment', paymentRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ 
