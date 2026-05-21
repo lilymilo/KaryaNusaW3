@@ -52,8 +52,8 @@ export const createSnapTransaction = async ({ midtransOrderId, grossAmount, cust
       price: Math.round(item.price),
       quantity: item.quantity,
     })),
-    // Aktifkan hanya payment method QRIS-related
-    enabled_payments: ['gopay', 'shopeepay', 'other_qris'],
+    // Tampilkan semua metode pembayaran yang aktif di akun Midtrans
+    // (QRIS, GoPay, ShopeePay, Kartu Kredit, Bank Transfer, dll.)
     callbacks: {
       finish: `${process.env.FRONTEND_URL || 'https://warnusthree.my.id'}/orders`,
     },
