@@ -1,5 +1,6 @@
 import { supabase, supabaseAdmin, getAuthClient } from '../config/supabaseClient.js';
 import { transferNFT, isNFTEnabled } from '../services/nftService.js';
+import { sendInvoiceEmail } from '../services/emailService.js';
 import { ethers } from 'ethers';
 
 export const getOrders = async (req, res) => {
@@ -182,6 +183,38 @@ export const createOrder = async (req, res) => {
           else console.log(`✅ Saldo seller ${prod.seller_id} bertambah: +${Number(item.price) * Number(item.quantity)}`);
         }
       }
+    }
+
+    // 📧 Kirim invoice email untuk pembayaran crypto (async, non-blocking)
+    if (isCryptoPayment && delivery_email) {
+      const invoiceItems = items.map(item => ({
+        name: item.name || 'Produk Digital',
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+      }));
+
+      const cryptoMethodLabel = payment_method === 'crypto_sol' ? 'Solana (SOL)' : 'Ethereum (ETH)';
+
+      sendInvoiceEmail({
+        to: delivery_email,
+        orderId: order.id,
+        midtransOrderId: tx_hash ? `TX: ${tx_hash.substring(0, 16)}...` : null,
+        items: invoiceItems,
+        totalAmount: Number(total_amount),
+        paymentMethod: cryptoMethodLabel,
+        paidAt: new Date().toISOString(),
+      }).then(() => {
+        console.log(`[createOrder] ✅ Invoice email terkirim ke ${delivery_email}`);
+        // Mark invoice terkirim di order (opsional, untuk tracking)
+        const adminClient = supabaseAdmin || authSupabase;
+        adminClient
+          .from('orders')
+          .update({ invoice_sent: true })
+          .eq('id', order.id)
+          .then(() => {});
+      }).catch(err => {
+        console.error('[createOrder] Gagal kirim invoice email:', err.message);
+      });
     }
 
     res.status(201).json({ 

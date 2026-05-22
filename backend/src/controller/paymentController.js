@@ -245,3 +245,114 @@ export const getPaymentStatus = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+/**
+ * POST /api/payment/simulate-settle/:orderId
+ * KHUSUS SANDBOX — Simulasi pembayaran sukses tanpa Midtrans simulator.
+ * Endpoint ini TIDAK akan berfungsi di mode production.
+ */
+export const simulateSettlement = async (req, res) => {
+  try {
+    // Blokir di production
+    if (process.env.MIDTRANS_IS_PRODUCTION === 'true') {
+      return res.status(403).json({ error: 'Endpoint ini hanya untuk testing (sandbox).' });
+    }
+
+    const { orderId } = req.params;
+    const adminClient = supabaseAdmin;
+
+    if (!adminClient) {
+      return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum dikonfigurasi.' });
+    }
+
+    // Cari transaksi pending untuk order ini
+    const { data: tx, error: txErr } = await adminClient
+      .from('transactions')
+      .select('*, orders(id, user_id, total_amount, delivery_email, status, order_items(*, products(id, name, price, seller_id)))')
+      .eq('order_id', orderId)
+      .eq('transaction_status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (txErr || !tx) {
+      return res.status(404).json({ error: 'Tidak ada transaksi pending untuk order ini.' });
+    }
+
+    const now = new Date().toISOString();
+
+    // 1. Update transaksi → settlement
+    await adminClient
+      .from('transactions')
+      .update({
+        transaction_status: 'settlement',
+        payment_type: 'qris_simulate',
+        settlement_time: now,
+        updated_at: now,
+      })
+      .eq('id', tx.id);
+
+    // 2. Update order → processing
+    if (tx.orders) {
+      await adminClient
+        .from('orders')
+        .update({ status: 'processing' })
+        .eq('id', tx.orders.id);
+    }
+
+    // 3. Credit saldo seller
+    if (tx.orders?.order_items) {
+      for (const item of tx.orders.order_items) {
+        if (item.products?.seller_id) {
+          const amount = Number(item.price) * Number(item.quantity);
+          const { error: balError } = await adminClient.rpc('increment_balance', {
+            p_user_id: item.products.seller_id,
+            p_amount: amount,
+          });
+          if (balError) {
+            console.error(`[SimSettle] Gagal credit saldo:`, balError.message);
+          } else {
+            console.log(`[SimSettle] ✅ Saldo seller +${amount}`);
+          }
+        }
+      }
+    }
+
+    // 4. Kirim invoice email
+    if (tx.orders?.delivery_email) {
+      const invoiceItems = (tx.orders.order_items || []).map(item => ({
+        name: item.products?.name || 'Produk Digital',
+        price: item.price,
+        quantity: item.quantity,
+      }));
+
+      sendInvoiceEmail({
+        to: tx.orders.delivery_email,
+        orderId: tx.orders.id,
+        midtransOrderId: tx.midtrans_order_id,
+        items: invoiceItems,
+        totalAmount: tx.gross_amount,
+        paymentMethod: 'QRIS (Simulasi)',
+        paidAt: now,
+      }).then(() => {
+        adminClient
+          .from('transactions')
+          .update({ invoice_sent: true, invoice_sent_at: now })
+          .eq('id', tx.id)
+          .then(() => {});
+      }).catch(err => {
+        console.error('[SimSettle] Gagal kirim email:', err.message);
+      });
+    }
+
+    res.json({
+      message: '✅ Pembayaran berhasil disimulasikan! Order sudah terkonfirmasi.',
+      orderId: tx.orders?.id,
+      transactionId: tx.id,
+      status: 'settlement',
+    });
+  } catch (error) {
+    console.error('[SimSettle] Error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
