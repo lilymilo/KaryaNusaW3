@@ -374,7 +374,7 @@ export default function CheckoutPage() {
           <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Lengkapi data pengiriman dan pembayaran.</p>
         </header>
 
-        <div className="grid gap-5 lg:grid-cols-5">
+        <div className={`grid gap-5 lg:grid-cols-5 ${loading ? 'loading-blur-blue' : ''}`}>
           <div className="space-y-4 lg:col-span-3">
             <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">

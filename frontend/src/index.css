@@ -95,3 +95,66 @@
   from { transform: translateY(24px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* Custom Blue Blur Loading and Shimmer Effects */
+.loading-blur-blue {
+  position: relative !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.loading-blur-blue::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(59, 130, 246, 0.08); /* Tailwind blue-500 with 8% opacity */
+  backdrop-filter: blur(4px) saturate(1.2);
+  -webkit-backdrop-filter: blur(4px) saturate(1.2);
+  z-index: 40;
+  border-radius: inherit;
+  transition: all 0.3s ease;
+}
+
+.loading-blur-blue::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin-top: -14px;
+  margin-left: -14px;
+  border: 3px solid rgba(59, 130, 246, 0.15);
+  border-top-color: #3b82f6; /* Blue-500 */
+  border-radius: 50%;
+  animation: loading-spin 0.8s linear infinite;
+  z-index: 41;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Dark mode override for blue blur overlay */
+.dark .loading-blur-blue::before {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+/* Beautiful blue pulse shimmer for cards */
+@keyframes bluePulse {
+  0%, 100% {
+    opacity: 0.6;
+    box-shadow: 0 0 0px rgba(59, 130, 246, 0);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.4);
+  }
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-shimmer-blue {
+  animation: bluePulse 1.8s ease-in-out infinite;
+}
+

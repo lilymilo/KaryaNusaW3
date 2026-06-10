@@ -154,7 +154,7 @@ export default function RegisterPage() {
           <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">Isi data akun Anda di bawah ini</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-[2rem] p-5 sm:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative z-10 transition-colors">
+        <div className={`bg-white dark:bg-gray-900 rounded-[2rem] p-5 sm:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative z-10 transition-colors ${(loading || walletLoading) ? 'loading-blur-blue' : ''}`}>
 
           <div className="mb-6">
           </div>

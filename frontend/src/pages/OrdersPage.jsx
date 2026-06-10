@@ -118,7 +118,7 @@ export default function OrdersPage() {
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 rounded-xl p-4 animate-pulse">
+              <div key={i} className="bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 rounded-xl p-4 animate-pulse loading-shimmer-blue">
                 <div className="h-4 bg-gray-200 rounded w-1/3 mb-4" />
                 <div className="h-16 bg-gray-100 rounded" />
               </div>

@@ -6,6 +6,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { WalletProvider } from './context/WalletContext';
+import GlobalProgress from './components/GlobalProgress';
+
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -91,6 +93,7 @@ export default function App() {
         <AuthProvider>
           <WalletProvider>
           <CartProvider>
+            <GlobalProgress />
             <AppRoutes />
             <Toaster
               position="top-center"

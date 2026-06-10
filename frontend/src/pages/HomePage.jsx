@@ -234,7 +234,7 @@ export default function HomePage() {
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden animate-pulse border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden animate-pulse loading-shimmer-blue border border-gray-200 dark:border-gray-700 shadow-sm">
                 <div className="aspect-[4/3] bg-gray-200 dark:bg-gray-700" />
                 <div className="p-4 space-y-3">
                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded" />

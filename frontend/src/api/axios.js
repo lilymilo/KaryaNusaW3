@@ -5,22 +5,45 @@ const api = axios.create({
   timeout: 30000, // 30s default (was 15s — too short for mobile)
 });
 
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+let activeRequests = 0;
+const updateLoadingState = (delta) => {
+  activeRequests += delta;
+  if (activeRequests < 0) activeRequests = 0;
   
-  // Extend timeout for file uploads (multipart/form-data)
-  if (config.data instanceof FormData) {
-    config.timeout = 120000; // 2 minutes for uploads
+  if (activeRequests === 1 && delta > 0) {
+    window.dispatchEvent(new CustomEvent('global-loading-start'));
+  } else if (activeRequests === 0) {
+    window.dispatchEvent(new CustomEvent('global-loading-end'));
   }
-  
-  return config;
-});
+};
+
+api.interceptors.request.use(
+  config => {
+    updateLoadingState(1);
+    const token = localStorage.getItem('token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    
+    // Extend timeout for file uploads (multipart/form-data)
+    if (config.data instanceof FormData) {
+      config.timeout = 120000; // 2 minutes for uploads
+    }
+    
+    return config;
+  },
+  error => {
+    updateLoadingState(-1);
+    return Promise.reject(error);
+  }
+);
 
 // Response interceptor: handle common errors globally
 api.interceptors.response.use(
-  response => response,
+  response => {
+    updateLoadingState(-1);
+    return response;
+  },
   error => {
+    updateLoadingState(-1);
     // Don't retry on auth errors — let the auth context handle logout
     if (error.response?.status === 401) {
       return Promise.reject(error);
